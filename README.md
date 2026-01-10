@@ -52,6 +52,7 @@ make list-profiles
 Current profiles:
 - **rpi-generic**: Raspberry Pi with generic overlay
 - **generic-arm64**: Generic ARM64 platform without overlays
+- **generic-amd64**: Generic AMD64/x86_64 platform without overlays
 
 ## Creating Custom Profiles
 
@@ -202,6 +203,8 @@ To add a new profile:
 2. Follow the structure of existing profiles
 3. Test the build: `./build.sh --profile your-profile`
 4. Submit a pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines and examples.
 
 ## License
 

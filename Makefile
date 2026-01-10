@@ -1,4 +1,4 @@
-.PHONY: help clean rpi-generic generic-arm64 list-profiles
+.PHONY: help clean rpi-generic generic-arm64 generic-amd64 list-profiles
 
 # Default target
 help:
@@ -9,6 +9,7 @@ help:
 	@echo "  list-profiles  - List all available build profiles"
 	@echo "  rpi-generic    - Build Raspberry Pi generic image"
 	@echo "  generic-arm64  - Build generic ARM64 image"
+	@echo "  generic-amd64  - Build generic AMD64 image"
 	@echo "  clean          - Remove build artifacts"
 	@echo ""
 	@echo "Custom builds:"
@@ -40,6 +41,9 @@ rpi-generic:
 
 generic-arm64:
 	./build.sh --profile generic-arm64
+
+generic-amd64:
+	./build.sh --profile generic-amd64
 
 # Clean build artifacts
 clean:
