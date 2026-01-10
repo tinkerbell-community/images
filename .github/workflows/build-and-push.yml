@@ -63,7 +63,12 @@ jobs:
         run: |
           set -e
           
+          # Get versions array and determine latest version
+          # The versions in talos-versions.json are sorted semantically, latest first
           versions=$(echo "$VERSIONS" | jq -r '.[]')
+          latest_version=$(echo "$VERSIONS" | jq -r '.[0]')
+          
+          echo "Latest version: $latest_version"
           
           for version in $versions; do
             echo "Processing Talos version: $version for architecture: $ARCH"
@@ -103,7 +108,8 @@ jobs:
               "talos-${version}-${ARCH}.raw.xz:application/vnd.talos.image.layer.v1+xz"
             
             # Also tag as latest for the most recent version
-            if [ "$(echo "$VERSIONS" | jq -r '.[0]')" == "$version" ]; then
+            # The versions are sorted semantically in talos-versions.json, with latest first
+            if [ "$version" == "$latest_version" ]; then
               latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos-${ARCH}:latest"
               echo "Tagging as latest: $latest_tag"
               oras push "$latest_tag" \
