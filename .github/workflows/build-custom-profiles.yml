@@ -30,7 +30,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        profile: [rpi-generic, generic-arm64, generic-amd64]
+        platform:
+          - nocloud
+        arch:
+          - arm64
+          - amd64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,28 +54,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check if profile should be built
-        id: check_profile
-        run: |
-          if [ -n "${{ github.event.inputs.profile }}" ]; then
-            if [ "${{ github.event.inputs.profile }}" == "${{ matrix.profile }}" ]; then
-              echo "build=true" >> $GITHUB_OUTPUT
-            else
-              echo "build=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "build=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Parse profile configuration
         id: config
-        if: steps.check_profile.outputs.build == 'true'
         run: |
-          profile="${{ matrix.profile }}"
+          profile="${{ matrix.platform }}-${{ matrix.arch }}"
 
           # Extract configuration from profile YAML
-          arch=$(grep "^arch:" "profiles/${profile}.yaml" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
-          platform=$(grep "^platform:" "profiles/${profile}.yaml" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
+          arch="${{ matrix.arch }}"
+          platform="${{ matrix.platform }}"
           version=$(grep -A 5 "^imager:" "profiles/${profile}.yaml" | grep "version:" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
           compression=$(grep -A 5 "^output:" "profiles/${profile}.yaml" | grep "compression:" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
 
@@ -79,6 +69,7 @@ jobs:
           echo "platform=$platform" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "compression=$compression" >> $GITHUB_OUTPUT
+          echo "profile=$profile" >> $GITHUB_OUTPUT
 
           echo "Building profile: $profile"
           echo "  Architecture: $arch"
@@ -87,12 +78,10 @@ jobs:
           echo "  Compression: $compression"
 
       - name: Build Talos image
-        if: steps.check_profile.outputs.build == 'true'
         run: |
-          ./build.sh --profile "${{ matrix.profile }}"
+          ./build.sh --profile "${{ steps.config.outputs.profile }}"
 
       - name: Verify built image
-        if: steps.check_profile.outputs.build == 'true'
         run: |
           ls -lh _out/
 
@@ -108,7 +97,6 @@ jobs:
           echo "IMAGE_FILE=$image_file" >> $GITHUB_ENV
 
       - name: Push to OCI Registry
-        if: steps.check_profile.outputs.build == 'true'
         env:
           ARCH: ${{ steps.config.outputs.arch }}
           PLATFORM: ${{ steps.config.outputs.platform }}
@@ -140,15 +128,13 @@ jobs:
           echo "Successfully pushed $latest_tag"
 
       - name: Upload artifacts
-        if: steps.check_profile.outputs.build == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: talos-${{ matrix.profile }}-${{ steps.config.outputs.arch }}-${{ steps.config.outputs.version }}
+          name: talos-${{ steps.config.outputs.profile }}-${{ steps.config.outputs.version }}
           path: _out/
           retention-days: 7
 
       - name: Image summary
-        if: steps.check_profile.outputs.build == 'true'
         env:
           ARCH: ${{ steps.config.outputs.arch }}
           PLATFORM: ${{ steps.config.outputs.platform }}
@@ -156,7 +142,7 @@ jobs:
           COMPRESSION: ${{ steps.config.outputs.compression }}
         run: |
           owner="${{ github.repository_owner }}"
-          echo "## Published Image: ${{ matrix.profile }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Published Image: ${{ steps.config.outputs.profile }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Architecture:** ${ARCH}" >> $GITHUB_STEP_SUMMARY
           echo "**Platform:** ${PLATFORM}" >> $GITHUB_STEP_SUMMARY

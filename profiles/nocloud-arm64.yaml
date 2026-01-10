@@ -27,5 +27,5 @@ system_extensions:
 output:
   kind: "image"
   disk_format: "raw"
-  disk_size: 1306902528  # ~1.25GB in bytes
+  disk_size: 1306902528 # ~1.25GB in bytes
   compression: "xz"
