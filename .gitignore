@@ -7,3 +7,22 @@ _out/
 *.swo
 *~
 .DS_Store
+# Downloaded Talos images
+*.raw
+*.raw.xz
+*.raw.gz
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

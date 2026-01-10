@@ -1,0 +1,108 @@
+name: Check for New Talos Releases
+
+on:
+  schedule:
+    # Check for new releases every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch latest Talos releases
+        id: fetch
+        run: |
+          set -e
+          
+          # Get the latest releases from Talos GitHub repository
+          echo "Fetching latest Talos releases..."
+          latest_releases=$(curl -s https://api.github.com/repos/siderolabs/talos/releases | \
+            jq -r '[.[] | select(.prerelease == false) | .tag_name] | .[0:10]')
+          
+          echo "Latest releases from GitHub:"
+          echo "$latest_releases" | jq -r '.[]'
+          
+          # Get current versions from our config
+          current_versions=$(jq -r '.versions' talos-versions.json)
+          
+          echo "Current tracked versions:"
+          echo "$current_versions" | jq -r '.[]'
+          
+          # Find new versions that are not in the current list
+          # For each version in latest_releases, check if it exists in current versions
+          # Keep only those that don't exist (index returns null for non-existent items)
+          new_versions=$(echo "$latest_releases" | jq -r --argjson current "$current_versions" \
+            '[.[] | select(. as $v | $current | index($v) | not)]')
+          
+          echo "new_versions=$new_versions" >> $GITHUB_OUTPUT
+          
+          if [ "$(echo "$new_versions" | jq -r 'length')" -gt 0 ]; then
+            echo "has_new=true" >> $GITHUB_OUTPUT
+            echo "New versions found:"
+            echo "$new_versions" | jq -r '.[]'
+          else
+            echo "has_new=false" >> $GITHUB_OUTPUT
+            echo "No new versions found"
+          fi
+
+      - name: Update versions file
+        if: steps.fetch.outputs.has_new == 'true'
+        run: |
+          set -e
+          
+          new_versions='${{ steps.fetch.outputs.new_versions }}'
+          current_versions=$(jq -r '.versions' talos-versions.json)
+          
+          # Merge and sort versions using semantic version sorting (keep only the latest 10)
+          # Sort by splitting version into major.minor.patch and sorting numerically
+          updated_versions=$(echo "$new_versions" "$current_versions" | \
+            jq -s 'add | unique | sort_by(
+              split(".") | 
+              map(ltrimstr("v") | tonumber? // 0)
+            ) | reverse | .[0:10]')
+          
+          # Update the file
+          echo "{\"versions\": $updated_versions}" | jq '.' > talos-versions.json
+          
+          echo "Updated talos-versions.json:"
+          cat talos-versions.json
+
+      - name: Format new versions for PR
+        if: steps.fetch.outputs.has_new == 'true'
+        id: format
+        run: |
+          new_versions='${{ steps.fetch.outputs.new_versions }}'
+          formatted=$(echo "$new_versions" | jq -r '.[] | "- `" + . + "`"')
+          echo "formatted_versions<<EOF" >> $GITHUB_OUTPUT
+          echo "$formatted" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.fetch.outputs.has_new == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Update Talos versions with new releases'
+          title: 'Update Talos versions'
+          body: |
+            ## New Talos Releases Detected
+            
+            This PR updates the Talos versions configuration with newly detected releases.
+            
+            ### New Versions
+            ${{ steps.format.outputs.formatted_versions }}
+            
+            The workflow will automatically build and push OCI images for these versions once this PR is merged.
+          branch: update-talos-versions
+          delete-branch: true
+          labels: |
+            automated
+            dependencies
