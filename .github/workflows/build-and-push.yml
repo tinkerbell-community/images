@@ -73,12 +73,25 @@ jobs:
             # Format: https://github.com/siderolabs/talos/releases/download/{version}/metal-{arch}.raw.xz
             download_url="https://github.com/siderolabs/talos/releases/download/${version}/metal-${ARCH}.raw.xz"
             
-            # Download the image
+            # Download the image with retry logic
             echo "Downloading from: $download_url"
-            if ! curl -L -f -o "talos-${version}-${ARCH}.raw.xz" "$download_url"; then
-              echo "Failed to download $download_url, skipping..."
-              continue
-            fi
+            max_retries=3
+            retry_count=0
+            while [ $retry_count -lt $max_retries ]; do
+              if curl -L -f -o "talos-${version}-${ARCH}.raw.xz" "$download_url"; then
+                echo "Successfully downloaded"
+                break
+              else
+                retry_count=$((retry_count + 1))
+                if [ $retry_count -lt $max_retries ]; then
+                  echo "Download failed, retrying ($retry_count/$max_retries)..."
+                  sleep 5
+                else
+                  echo "Failed to download after $max_retries attempts, skipping..."
+                  continue 2
+                fi
+              fi
+            done
             
             # Construct the OCI image tag
             image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos-${ARCH}:${version}"
