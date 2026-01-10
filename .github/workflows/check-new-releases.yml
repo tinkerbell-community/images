@@ -80,7 +80,7 @@ jobs:
         id: format
         run: |
           new_versions='${{ steps.fetch.outputs.new_versions }}'
-          formatted=$(echo "$new_versions" | jq -r '.[] | "- `" + . + "`"' | tr '\n' '\n')
+          formatted=$(echo "$new_versions" | jq -r '.[] | "- `" + . + "`"')
           echo "formatted_versions<<EOF" >> $GITHUB_OUTPUT
           echo "$formatted" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
