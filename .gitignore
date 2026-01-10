@@ -1,0 +1,9 @@
+# Build artifacts
+_out/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
