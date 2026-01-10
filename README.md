@@ -1,8 +1,58 @@
 # talos-images
 
-Raw Talos Images in OCI
+Raw Talos Images in OCI format, published to GitHub Container Registry.
 
 An extensible build framework for creating Talos Linux raw images with custom configurations, overlays, and system extensions.
+
+## Published OCI Images
+
+Pre-built custom Talos images are automatically published to `ghcr.io` following this naming pattern:
+
+```
+ghcr.io/${owner}/talos/${ARCH}/${PLATFORM}:${VERSION}.${COMPRESSION}
+```
+
+### Available Images
+
+Images are published for different profiles with varying architectures and platforms:
+
+| Profile | Architecture | Platform | Image Path |
+|---------|-------------|----------|------------|
+| rpi-generic | arm64 | nocloud | `ghcr.io/tinkerbell-community/talos/arm64/nocloud:v1.12.1.xz` |
+| generic-arm64 | arm64 | nocloud | `ghcr.io/tinkerbell-community/talos/arm64/nocloud:v1.12.1.xz` |
+| generic-amd64 | amd64 | nocloud | `ghcr.io/tinkerbell-community/talos/amd64/nocloud:v1.12.1.xz` |
+
+### Pulling Images with ORAS
+
+To pull a Talos image:
+
+```bash
+# Pull a specific version for arm64/nocloud
+oras pull ghcr.io/tinkerbell-community/talos/arm64/nocloud:v1.12.1.xz
+
+# Pull a specific version for amd64/nocloud
+oras pull ghcr.io/tinkerbell-community/talos/amd64/nocloud:v1.12.1.xz
+
+# Pull the latest version for a platform
+oras pull ghcr.io/tinkerbell-community/talos/arm64/nocloud:latest
+```
+
+### Using the Images
+
+The pulled file will be a compressed raw disk image (`.raw.xz` format) that can be:
+- Written directly to a disk using `dd` or similar tools
+- Used with virtualization platforms
+- Decompressed and used in bare metal deployments
+
+Example:
+```bash
+# Pull the image
+oras pull ghcr.io/tinkerbell-community/talos/amd64/nocloud:v1.12.1.xz
+
+# Decompress and write to disk
+xz -d nocloud-amd64.raw.xz
+dd if=nocloud-amd64.raw of=/dev/sdX bs=4M status=progress
+```
 
 ## Features
 
@@ -10,8 +60,9 @@ An extensible build framework for creating Talos Linux raw images with custom co
 - **Extensible**: Easy to add new profiles for different hardware platforms
 - **Flexible**: Support for overlays, system extensions, and custom configurations
 - **Simple**: Clean CLI interface with Make targets for common builds
+- **Automated Publishing**: GitHub Actions automatically build and publish OCI images
 
-## Quick Start
+## Building Images Locally
 
 ### Prerequisites
 
@@ -209,76 +260,70 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines and examples.
 ## License
 
 See [LICENSE](LICENSE) file for details.
-Raw Talos Images in OCI format, published to GitHub Container Registry.
-
-## Overview
-
-This repository automatically builds and publishes Talos OS raw disk images as OCI artifacts using [ORAS](https://oras.land/). Images are available at `ghcr.io/tinkerbell-community/talos-images`.
-
-## Available Images
-
-Images are published for multiple Talos versions and architectures:
-- **Architectures**: `amd64`, `arm64`
-- **Versions**: See [talos-versions.json](talos-versions.json) for the list of tracked versions
-
-## Usage
-
-### Pulling Images with ORAS
-
-To pull a Talos image:
-
-```bash
-# Pull a specific version for amd64
-oras pull ghcr.io/tinkerbell-community/talos-images/talos-amd64:v1.8.3
-
-# Pull a specific version for arm64
-oras pull ghcr.io/tinkerbell-community/talos-images/talos-arm64:v1.8.3
-
-# Pull the latest version
-oras pull ghcr.io/tinkerbell-community/talos-images/talos-amd64:latest
-```
-
-### Using the Images
-
-The pulled file will be a compressed raw disk image (`.raw.xz` format) that can be:
-- Written directly to a disk using `dd` or similar tools
-- Used with virtualization platforms
-- Decompressed and used in bare metal deployments
-
-Example:
-```bash
-# Pull the image
-oras pull ghcr.io/tinkerbell-community/talos-images/talos-amd64:v1.8.3
-
-# Decompress and write to disk
-xz -d metal-amd64.raw.xz
-dd if=metal-amd64.raw of=/dev/sdX bs=4M status=progress
-```
 
 ## Automation
 
-### Automatic Version Detection
+The repository includes automated GitHub Actions workflows for building and publishing Talos images.
 
-The repository includes automated workflows that:
-1. **Check for new releases** - Runs every 6 hours to detect new Talos versions
-2. **Create PRs** - Automatically creates PRs when new versions are found
-3. **Build and push** - Builds and publishes images when versions are updated
+### Custom Profile Builds
 
-### Manual Trigger
+**Workflow**: `Build and Push Custom Profiles`
 
-You can manually trigger a build for a specific version:
+Automatically builds custom Talos images using the profile-based framework:
+- **Automatic builds** - Runs when profiles or build scripts are updated
+- **Weekly schedule** - Rebuilds all profiles weekly with latest configurations
+- **Manual trigger** - Build specific profiles on demand
+
+Images are published following this naming pattern:
+```
+ghcr.io/${owner}/talos/${ARCH}/${PLATFORM}:${VERSION}.${COMPRESSION}
+```
+
+**Manual Trigger**:
+1. Go to the "Actions" tab in GitHub
+2. Select "Build and Push Custom Profiles" workflow
+3. Click "Run workflow"
+4. Optionally specify a profile (leave empty to build all profiles)
+
+### Official Talos Image Publishing
+
+**Workflow**: `Build and Push Talos Images`
+
+Automatically builds and publishes official Talos OS images from GitHub releases:
+- **Check for new releases** - Runs every 6 hours to detect new Talos versions
+- **Create PRs** - Automatically creates PRs when new versions are found
+- **Build and push** - Downloads and publishes official images when versions are updated
+
+**Manual Trigger**:
 1. Go to the "Actions" tab in GitHub
 2. Select "Build and Push Talos Images" workflow
 3. Click "Run workflow"
 4. Enter the Talos version (e.g., `v1.8.3`)
 
-## Image Format
+## Image Formats
 
-Images are published with the following characteristics:
+### Custom Profile Images
+
+Custom images built from profiles are published with:
+- **Artifact Type**: `application/vnd.acme.rocket.config`
+- **Naming Pattern**: `ghcr.io/${owner}/talos/${ARCH}/${PLATFORM}:${VERSION}.${COMPRESSION}`
+- **Format**: Compressed raw disk images (`.raw.xz` or `.raw.gz`)
+
+### Official Talos Images
+
+Official Talos images are published with:
 - **Artifact Type**: `application/vnd.talos.image.raw.xz`
-- **Media Type**: `application/vnd.talos.image.layer.v1+xz`
+- **Naming Pattern**: `ghcr.io/${owner}/talos-images/talos-${ARCH}:${VERSION}`
 - **Format**: XZ-compressed raw disk images
 
 ## Contributing
 
-To add or update Talos versions, modify the `talos-versions.json` file and create a pull request.
+To add a new profile:
+1. Create a new YAML file in `profiles/`
+2. Follow the structure of existing profiles
+3. Test the build: `./build.sh --profile your-profile`
+4. Submit a pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines and examples.
+
+To add or update official Talos versions, modify the `talos-versions.json` file and create a pull request.
