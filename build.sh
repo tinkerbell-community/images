@@ -63,7 +63,8 @@ parse_yaml_value() {
   if [[ "${key}" == *.* ]]; then
     local parent="${key%%.*}"
     local child="${key#*.}"
-    value=$(grep -A 10 "^${parent}:" "${file}" | grep "${child}:" | head -1)
+    # Increased context lines to handle larger sections
+    value=$(grep -A 30 "^${parent}:" "${file}" | grep "${child}:" | head -1)
   else
     value=$(grep "^${key}:" "${file}" | head -1)
   fi
@@ -88,14 +89,17 @@ parse_yaml_array() {
   local file="$1"
   local key="$2"
   
-  # Use sed to extract array items
-  sed -n "/^${key}:/,/^[^ ]/p" "${file}" | grep "^  - " | sed 's/^  - "\?\([^"]*\)"\?/\1/'
+  # Use sed to extract array items with flexible indentation
+  sed -n "/^${key}:/,/^[^ ]/p" "${file}" | grep "^[[:space:]]*- " | sed 's/^[[:space:]]*- "\?\([^"]*\)"\?/\1/'
 }
 
 # Check if overlay section exists in YAML
 has_overlay() {
   local file="$1"
-  grep -q "^overlay:" "${file}" && grep -A 2 "^overlay:" "${file}" | grep -q "name:" && grep -A 2 "^overlay:" "${file}" | grep -q "image:"
+  # Optimize by storing overlay section once and checking both fields
+  local overlay_section
+  overlay_section=$(grep -A 5 "^overlay:" "${file}" 2>/dev/null)
+  [[ -n "${overlay_section}" ]] && echo "${overlay_section}" | grep -q "name:" && echo "${overlay_section}" | grep -q "image:"
 }
 
 # Build extensions YAML
