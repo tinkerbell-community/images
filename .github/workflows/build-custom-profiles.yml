@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: 'Profile to build (leave empty for all profiles)'
+        description: "Profile to build (leave empty for all profiles)"
         required: false
         type: string
   push:
     branches:
       - main
     paths:
-      - 'profiles/**'
-      - 'build.sh'
-      - '.github/workflows/build-custom-profiles.yml'
+      - "profiles/**"
+      - "build.sh"
+      - ".github/workflows/build-custom-profiles.yml"
   schedule:
     # Run weekly to rebuild with latest Talos versions
-    - cron: '0 3 * * 0'
+    - cron: "0 3 * * 0"
 
 env:
   REGISTRY: ghcr.io
@@ -68,18 +68,18 @@ jobs:
         if: steps.check_profile.outputs.build == 'true'
         run: |
           profile="${{ matrix.profile }}"
-          
+
           # Extract configuration from profile YAML
           arch=$(grep "^arch:" "profiles/${profile}.yaml" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
           platform=$(grep "^platform:" "profiles/${profile}.yaml" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
           version=$(grep -A 5 "^imager:" "profiles/${profile}.yaml" | grep "version:" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
           compression=$(grep -A 5 "^output:" "profiles/${profile}.yaml" | grep "compression:" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
-          
+
           echo "arch=$arch" >> $GITHUB_OUTPUT
           echo "platform=$platform" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "compression=$compression" >> $GITHUB_OUTPUT
-          
+
           echo "Building profile: $profile"
           echo "  Architecture: $arch"
           echo "  Platform: $platform"
@@ -95,15 +95,15 @@ jobs:
         if: steps.check_profile.outputs.build == 'true'
         run: |
           ls -lh _out/
-          
+
           # Find the built image file
           image_file=$(find _out/ -name "*.raw.${{ steps.config.outputs.compression }}" | head -1)
-          
+
           if [ -z "$image_file" ]; then
             echo "Error: No image file found in _out/"
             exit 1
           fi
-          
+
           echo "Found image: $image_file"
           echo "IMAGE_FILE=$image_file" >> $GITHUB_ENV
 
@@ -116,27 +116,27 @@ jobs:
           COMPRESSION: ${{ steps.config.outputs.compression }}
         run: |
           # Construct the OCI image tag following the pattern:
-          # ghcr.io/${owner}/talos/${ARCH}/${PLATFORM}:${VERSION}.${COMPRESSION}
+          # ghcr.io/${{ github.repository }}/talos/${ARCH}/${PLATFORM}:${VERSION}.${COMPRESSION}
           owner="${{ github.repository_owner }}"
-          image_tag="${{ env.REGISTRY }}/${owner}/talos/${ARCH}/${PLATFORM}:${VERSION}.${COMPRESSION}"
-          
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/${ARCH}/${PLATFORM}:${VERSION}.${COMPRESSION}"
+
           echo "Pushing to: $image_tag"
-          
+
           # Push using ORAS with the specified artifact type
           oras push "$image_tag" \
             --artifact-type application/vnd.acme.rocket.config \
             "$IMAGE_FILE"
-          
+
           echo "Successfully pushed $image_tag"
-          
+
           # Also tag as latest for the platform
-          latest_tag="${{ env.REGISTRY }}/${owner}/talos/${ARCH}/${PLATFORM}:latest"
+          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/${ARCH}/${PLATFORM}:latest"
           echo "Tagging as latest: $latest_tag"
-          
+
           oras push "$latest_tag" \
             --artifact-type application/vnd.acme.rocket.config \
             "$IMAGE_FILE"
-          
+
           echo "Successfully pushed $latest_tag"
 
       - name: Upload artifacts
@@ -164,10 +164,10 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Pull image with:" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "oras pull ${{ env.REGISTRY }}/${owner}/talos/${ARCH}/${PLATFORM}:${VERSION}.${COMPRESSION}" >> $GITHUB_STEP_SUMMARY
+          echo "oras pull ${{ env.REGISTRY }}/${{ github.repository }}/talos/${ARCH}/${PLATFORM}:${VERSION}.${COMPRESSION}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Or pull latest:" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "oras pull ${{ env.REGISTRY }}/${owner}/talos/${ARCH}/${PLATFORM}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "oras pull ${{ env.REGISTRY }}/${{ github.repository }}/talos/${ARCH}/${PLATFORM}:latest" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
