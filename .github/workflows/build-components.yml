@@ -34,9 +34,21 @@ permissions:
 
 jobs:
   build-components:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     if: github.event.inputs.target != 'release'
     steps:
+      - name: Maximize build space
+        run: |
+          echo "Before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          echo "After cleanup:"
+          df -h
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -44,6 +56,30 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            network=host
+            image=moby/buildkit:v0.17.3
+          buildkitd-flags: --allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure
+          buildkitd-config: .github/buildkitd.toml
+
+      - name: Configure kernel build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ccache
+            vendor/pkgs/kernel/build
+          key: kernel-arm64-${{ hashFiles('vendor/pkgs/Pkgfile', 'patches/**', 'config.yaml') }}
+          restore-keys: |
+            kernel-arm64-
+
+      - name: Configure Docker layer cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: buildx-arm64-${{ hashFiles('vendor/pkgs/Pkgfile') }}
+          restore-keys: |
+            buildx-arm64-
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -72,6 +108,15 @@ jobs:
           echo "Talos Version: $talos_version"
           echo "Overlay Version: $overlay_version"
 
+      - name: Set up ccache
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ccache
+          ccache --set-config=max_size=5G
+          ccache --set-config=compression=true
+          ccache --set-config=compression_level=6
+          echo "CCACHE_DIR=$HOME/.cache/ccache" >> $GITHUB_ENV
+
       - name: Set up vendor repositories
         run: |
           make vendor-all
@@ -81,15 +126,30 @@ jobs:
         env:
           REGISTRY: ${{ steps.config.outputs.registry }}
           REGISTRY_USERNAME: ${{ steps.config.outputs.username }}
+          DOCKER_BUILDKIT: 1
+          BUILDKIT_PROGRESS: plain
         run: |
-          echo "Building kernel..."
-          make kernel
+          echo "Building kernel with optimizations..."
+
+          # Build with optimized arguments
+          make kernel \
+            PLATFORM=linux/arm64 \
+            PUSH=true \
+            PROGRESS=plain \
+            CI_ARGS="--cache-from=type=registry,ref=${{ steps.config.outputs.registry }}/${{ steps.config.outputs.username }}/kernel:buildcache \
+                     --cache-to=type=registry,ref=${{ steps.config.outputs.registry }}/${{ steps.config.outputs.username }}/kernel:buildcache,mode=max \
+                     --build-arg=MAKEFLAGS=-j$(nproc) \
+                     --build-arg=CFLAGS='-O2 -pipe -fomit-frame-pointer' \
+                     --build-arg=KBUILD_BUILD_TIMESTAMP=@$(shell git log -1 --pretty=%ct) \
+                     --ulimit nofile=1024000:1024000 \
+                     --shm-size=2g"
 
       - name: Build overlay
         if: github.event.inputs.target == '' || github.event.inputs.target == 'overlay' || github.event.inputs.target == 'installer'
         env:
           REGISTRY: ${{ steps.config.outputs.registry }}
           REGISTRY_USERNAME: ${{ steps.config.outputs.username }}
+          DOCKER_BUILDKIT: 1
         run: |
           echo "Building overlay..."
           make overlay
@@ -99,9 +159,15 @@ jobs:
         env:
           REGISTRY: ${{ steps.config.outputs.registry }}
           REGISTRY_USERNAME: ${{ steps.config.outputs.username }}
+          DOCKER_BUILDKIT: 1
         run: |
           echo "Building installer..."
           make installer
+
+      - name: Show ccache statistics
+        if: always()
+        run: |
+          ccache --show-stats || true
 
       - name: Component summary
         env:

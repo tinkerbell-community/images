@@ -12,6 +12,12 @@ REGISTRY_USERNAME ?= tinkerbell-community
 
 TAG ?= $(shell git describe --tags --exact-match)
 
+# Kernel build configuration
+PLATFORM ?= linux/arm64
+PROGRESS ?= auto
+PUSH ?= true
+CI_ARGS ?=
+
 EXTENSIONS ?= ghcr.io/siderolabs/gvisor:20250505.0@sha256:d7503b59603f030b972ceb29e5e86979e6c889be1596e87642291fee48ce380c
 
 PKG_REPOSITORY = https://github.com/siderolabs/pkgs.git
@@ -153,8 +159,10 @@ patches: patches-pkgs patches-talos
 kernel: patches-pkgs
 	cd "$(VENDOR_DIRECTORY)/pkgs" && \
 		$(MAKE) \
-			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) PUSH=true \
-			PLATFORM=linux/arm64 \
+			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) PUSH=$(PUSH) \
+			PLATFORM=$(PLATFORM) \
+			PROGRESS=$(PROGRESS) \
+			CI_ARGS="$(CI_ARGS)" \
 			kernel
 
 #

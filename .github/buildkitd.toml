@@ -1,0 +1,26 @@
+# BuildKit daemon configuration for optimized kernel builds
+
+[worker.oci]
+  # Enable garbage collection
+  gc = true
+  # Keep 20GB of storage for cache
+  gckeepstorage = 20000
+  # Max parallelism for builds
+  max-parallelism = 4
+
+  # Keep build cache for 7 days
+  [[worker.oci.gcpolicy]]
+    keepBytes = 10737418240  # 10GB
+    keepDuration = 604800     # 7 days
+    filters = ["type==source.local", "type==exec.cachemount", "type==source.git.checkout"]
+  
+  # Keep larger cache for everything else
+  [[worker.oci.gcpolicy]]
+    all = true
+    keepBytes = 21474836480  # 20GB
+
+[registry."docker.io"]
+  mirrors = ["mirror.gcr.io"]
+
+[registry."ghcr.io"]
+  mirrors = []
