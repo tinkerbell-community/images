@@ -16,11 +16,7 @@ on:
     branches:
       - main
     paths:
-      - "vendor/pkgs/**"
-      - "vendor/talos/**"
-      - "patches/**"
-      - "scripts/**"
-      - ".github/workflows/build-components.yml"
+      - "config.yaml"
   schedule:
     # Run weekly to rebuild components
     - cron: "0 4 * * 0"
@@ -153,7 +149,7 @@ jobs:
           BUILDKIT_PROGRESS: plain
         run: |
           echo "Building overlay with optimizations..."
-          
+
           # Build with optimized arguments
           make overlay \
             PLATFORM=linux/arm64 \
@@ -174,7 +170,7 @@ jobs:
           BUILDKIT_PROGRESS: plain
         run: |
           echo "Building installer with optimizations..."
-          
+
           # Build with optimized arguments
           make installer \
             PLATFORM=linux/arm64 \
