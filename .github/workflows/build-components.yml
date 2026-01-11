@@ -131,11 +131,14 @@ jobs:
             overlay="${{ steps.filter.outputs.overlay }}"
             installer="${{ steps.filter.outputs.installer }}"
             
-            # Dependency chain: kernel -> overlay -> installer
-            # If Pkgfile changes, rebuild everything
-            # If kernel changes, rebuild kernel, overlay, installer
-            # If overlay changes, rebuild overlay, installer
-            # If installer changes, rebuild installer only
+            # Dependency chain: 
+            # RPi-specific: kernel -> overlay -> installer -> rpi image
+            # Generic: installer -> arm64/amd64 images
+            # 
+            # If Pkgfile changes, rebuild everything (version change)
+            # If kernel changes, rebuild kernel, overlay, installer, rpi image only
+            # If overlay changes, rebuild overlay, installer, rpi image only
+            # If installer changes, rebuild installer and all images
             
             if [ "$pkgfile" == "true" ] || [ "$kernel" == "true" ]; then
               echo "build-kernel=true" >> $GITHUB_OUTPUT
@@ -149,8 +152,8 @@ jobs:
               echo "build-overlay=true" >> $GITHUB_OUTPUT
               echo "build-installer=true" >> $GITHUB_OUTPUT
               echo "build-rpi=true" >> $GITHUB_OUTPUT
-              echo "build-arm64=true" >> $GITHUB_OUTPUT
-              echo "build-amd64=true" >> $GITHUB_OUTPUT
+              echo "build-arm64=false" >> $GITHUB_OUTPUT
+              echo "build-amd64=false" >> $GITHUB_OUTPUT
             elif [ "$installer" == "true" ]; then
               echo "build-kernel=false" >> $GITHUB_OUTPUT
               echo "build-overlay=false" >> $GITHUB_OUTPUT
