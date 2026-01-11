@@ -69,7 +69,6 @@ jobs:
         with:
           path: |
             ~/.cache/ccache
-            vendor/pkgs/kernel/build
           key: kernel-arm64-${{ hashFiles('vendor/pkgs/Pkgfile', 'patches/**', 'config.yaml') }}
           restore-keys: |
             kernel-arm64-
