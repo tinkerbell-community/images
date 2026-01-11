@@ -8,7 +8,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
 
-CONFIG_FILE="${PROJECT_DIR}/config.yaml"
+CONFIG_FILE="${PROJECT_DIR}/config/installer.yaml"
 MODULES_FILE="${PROJECT_DIR}/vendor/talos/hack/modules-arm64.txt"
 
 if [[ ! -f "${CONFIG_FILE}" ]]; then
