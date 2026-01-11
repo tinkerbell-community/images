@@ -51,9 +51,6 @@ jobs:
       build-rpi: ${{ steps.decide.outputs.build-rpi }}
       build-arm64: ${{ steps.decide.outputs.build-arm64 }}
       build-amd64: ${{ steps.decide.outputs.build-amd64 }}
-      build-rpi: ${{ steps.decide.outputs.build-rpi }}
-      build-arm64: ${{ steps.decide.outputs.build-arm64 }}
-      build-amd64: ${{ steps.decide.outputs.build-amd64 }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
