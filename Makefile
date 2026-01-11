@@ -181,7 +181,7 @@ overlay: | $(VENDOR_DIRECTORY)/sbc-raspberrypi
 #
 # Installer/Image
 #
-installer: | patches-talos
+installer: patches-talos
 	cd "$(VENDOR_DIRECTORY)/talos" && \
 		$(MAKE) \
 			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) PUSH=$(PUSH) \
