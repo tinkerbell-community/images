@@ -319,13 +319,8 @@ modules:
     - kernel/drivers/net/usb/dm9601.ko
     - kernel/drivers/net/usb/lan78xx.ko
     # Raspberry Pi specific modules
-    - kernel/drivers/staging/vc04_services/vchiq-mmal/bcm2835-mmal-vchiq.ko
-    - kernel/drivers/staging/vc04_services/bcm2835-audio/snd-bcm2835.ko
-    - kernel/drivers/staging/vc04_services/bcm2835-camera/bcm2835-v4l2.ko
     - kernel/drivers/char/broadcom/bcm2835-gpiomem.ko
     - kernel/drivers/mailbox/bcm2835-mailbox.ko
-    - kernel/drivers/watchdog/bcm2835_wdt.ko
-    - kernel/drivers/soc/bcm/bcm2835-power.ko
     - kernel/drivers/clk/bcm/clk-raspberrypi.ko
     - kernel/drivers/firmware/raspberrypi.ko
     - kernel/drivers/gpio/gpio-raspberrypi-exp.ko
@@ -333,10 +328,6 @@ modules:
     - kernel/drivers/nvmem/nvmem_raspberrypi_otp.ko
     - kernel/drivers/pwm/pwm-brcmstb.ko
     - kernel/drivers/pwm/pwm-gpio.ko
-    - kernel/drivers/reset/reset-raspberrypi.ko
-    - kernel/drivers/rtc/rtc-rpi.ko
-    - kernel/drivers/thermal/broadcom/bcm2711_thermal.ko
-    - kernel/drivers/thermal/broadcom/bcm2835_thermal.ko
     # Raspberry Pi 5 RP1 modules
     - kernel/drivers/firmware/rp1.ko
     - kernel/drivers/mailbox/bcm-mbox-rp1.ko
@@ -345,7 +336,6 @@ modules:
     - kernel/drivers/gpu/drm/rp1/rp1-dsi.ko
     - kernel/drivers/gpu/drm/rp1/rp1-dpi.ko
     - kernel/drivers/gpu/drm/rp1/rp1-vec.ko
-    - kernel/sound/soc/bcm/rp1-audio-out.ko
     - kernel/drivers/pwm/pwm-pio-rp1.ko
 
 # Kernel config options to add and remove for Raspberry Pi 4 and 5 support
