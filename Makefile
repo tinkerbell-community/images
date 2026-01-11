@@ -28,6 +28,7 @@ SBCOVERLAY_TAG = $(shell cd $(VENDOR_DIRECTORY)/sbc-raspberrypi5 && git describe
 .PHONY: help clean list-profiles build rpi arm64 amd64
 .PHONY: vendor vendor-clean patches-pkgs patches-talos patches
 .PHONY: kernel overlay installer release
+.PHONY: download-push-talos
 
 #
 # Help
@@ -79,16 +80,37 @@ ifndef PROFILE
 	@make list-profiles
 	@exit 1
 endif
-	./build.sh --profile $(PROFILE)
+	./scripts/build.sh --profile $(PROFILE)
 
 rpi:
-	./build.sh --profile rpi
+	./scripts/build.sh \
+		--arch arm64 \
+		--platform metal \
+		--version $(TALOS_TAG) \
+		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
+		--overlay-name rpi_generic \
+		--overlay-image $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_TAG) \
+		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG) \
+		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
+		--extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
+		--disk-size 1306902528
 
 arm64:
-	./build.sh --profile arm64
+	./scripts/build.sh \
+		--arch arm64 \
+		--platform nocloud \
+		--version $(TALOS_TAG) \
+		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager
 
 amd64:
-	./build.sh --profile amd64
+	./scripts/build.sh \
+		--arch amd64 \
+		--platform nocloud \
+		--version $(TALOS_TAG) \
+		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
+		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
+    --extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
+    --extension ghcr.io/siderolabs/intel-ucode:20231114
 
 #
 # Checkouts
@@ -161,14 +183,17 @@ installer: patches-talos kernel overlay
 			PKG_KERNEL=$(REGISTRY)/$(REGISTRY_USERNAME)/kernel:$(PKGS_TAG) \
 			INSTALLER_ARCH=arm64 PLATFORM=linux/arm64 \
 			IMAGER_ARGS="--overlay-name=rpi_generic --overlay-image=$(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_TAG) --system-extension-image=$(EXTENSIONS)" \
-			kernel initramfs imager installer-base installer && \
-		docker \
-			run --rm -t -v ./_out:/out -v /dev:/dev --privileged $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_TAG) \
-			metal --arch arm64 \
-			--base-installer-image="$(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG)" \
-			--overlay-name="rpi_generic" \
-			--overlay-image="$(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_TAG)" \
-			--system-extension-image="$(EXTENSIONS)"
+			kernel initramfs imager installer-base installer
+	./scripts/build.sh \
+		--arch arm64 \
+		--platform metal \
+		--version $(TALOS_TAG) \
+		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
+		--overlay-name rpi_generic \
+		--overlay-image $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_TAG) \
+		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG) \
+		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
+		--extension ghcr.io/siderolabs/util-linux-tools:2.41.2
 
 #
 # Release

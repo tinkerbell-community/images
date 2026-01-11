@@ -30,11 +30,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform:
-          - nocloud
-        arch:
-          - arm64
-          - amd64
+        include:
+          - target: arm64
+            arch: arm64
+            platform: nocloud
+          - target: amd64
+            arch: amd64
+            platform: nocloud
+          - target: rpi
+            arch: arm64
+            platform: metal
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -54,32 +59,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Parse profile configuration
+      - name: Get profile configuration
         id: config
         run: |
           profile="${{ matrix.platform }}-${{ matrix.arch }}"
 
-          # Extract configuration from profile YAML
-          arch="${{ matrix.arch }}"
-          platform="${{ matrix.platform }}"
-          version=$(grep -A 5 "^imager:" "profiles/${profile}.yaml" | grep "version:" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
-          compression=$(grep -A 5 "^output:" "profiles/${profile}.yaml" | grep "compression:" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
+          # Extract configuration from profile YAML if it exists
+          if [ -f "profiles/${profile}.yaml" ]; then
+            version=$(grep -A 5 "^imager:" "profiles/${profile}.yaml" | grep "version:" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
+            compression=$(grep -A 5 "^output:" "profiles/${profile}.yaml" | grep "compression:" | sed 's/.*: *"\?\([^"]*\)"\?.*/\1/' | tr -d ' ')
+          else
+            # Use defaults from Makefile
+            version=$(grep "^TALOS_VERSION" Makefile | cut -d'=' -f2 | tr -d ' ')
+            compression="xz"
+          fi
 
-          echo "arch=$arch" >> $GITHUB_OUTPUT
-          echo "platform=$platform" >> $GITHUB_OUTPUT
+          echo "arch=${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "platform=${{ matrix.platform }}" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "compression=$compression" >> $GITHUB_OUTPUT
-          echo "profile=$profile" >> $GITHUB_OUTPUT
+          echo "target=${{ matrix.target }}" >> $GITHUB_OUTPUT
 
-          echo "Building profile: $profile"
-          echo "  Architecture: $arch"
-          echo "  Platform: $platform"
+          echo "Building target: ${{ matrix.target }}"
+          echo "  Architecture: ${{ matrix.arch }}"
+          echo "  Platform: ${{ matrix.platform }}"
           echo "  Talos Version: $version"
           echo "  Compression: $compression"
 
       - name: Build Talos image
         run: |
-          ./build.sh --profile "${{ steps.config.outputs.profile }}"
+          make ${{ steps.config.outputs.target }}
 
       - name: Verify built image
         run: |
@@ -130,7 +139,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: talos-${{ steps.config.outputs.profile }}-${{ steps.config.outputs.version }}
+          name: talos-${{ steps.config.outputs.target }}-${{ steps.config.outputs.version }}
           path: _out/
           retention-days: 7
 
@@ -141,8 +150,7 @@ jobs:
           VERSION: ${{ steps.config.outputs.version }}
           COMPRESSION: ${{ steps.config.outputs.compression }}
         run: |
-          owner="${{ github.repository_owner }}"
-          echo "## Published Image: ${{ steps.config.outputs.profile }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Published Image: ${{ steps.config.outputs.target }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Architecture:** ${ARCH}" >> $GITHUB_STEP_SUMMARY
           echo "**Platform:** ${PLATFORM}" >> $GITHUB_STEP_SUMMARY

@@ -99,54 +99,64 @@ done
 mkdir -p "${OUTPUT_DIR}"
 
 # Build profile YAML
-cat > /tmp/imager-profile.yaml <<EOF
-arch: ${ARCH}
+PROFILE_YAML="arch: ${ARCH}
 platform: ${PLATFORM}
 secureboot: ${SECUREBOOT}
-version: ${VERSION}
-EOF
+version: ${VERSION}"
 
 # Add input section if needed
 if [[ -n "${KERNEL_PATH}" || -n "${INITRAMFS_PATH}" || -n "${BASE_INSTALLER}" || ${#SYSTEM_EXTENSIONS[@]} -gt 0 ]]; then
-  echo "input:" >> /tmp/imager-profile.yaml
+  PROFILE_YAML="${PROFILE_YAML}
+input:"
   
   # Kernel
   if [[ -n "${KERNEL_PATH}" ]]; then
-    echo "  kernel:" >> /tmp/imager-profile.yaml
-    echo "    path: ${KERNEL_PATH}" >> /tmp/imager-profile.yaml
+    PROFILE_YAML="${PROFILE_YAML}
+  kernel:
+    path: ${KERNEL_PATH}"
   fi
   
   # Initramfs
   if [[ -n "${INITRAMFS_PATH}" ]]; then
-    echo "  initramfs:" >> /tmp/imager-profile.yaml
-    echo "    path: ${INITRAMFS_PATH}" >> /tmp/imager-profile.yaml
+    PROFILE_YAML="${PROFILE_YAML}
+  initramfs:
+    path: ${INITRAMFS_PATH}"
   fi
   
   # Base installer
   if [[ -n "${BASE_INSTALLER}" ]]; then
-    echo "  baseInstaller:" >> /tmp/imager-profile.yaml
+    PROFILE_YAML="${PROFILE_YAML}
+  baseInstaller:"
     # Check if it's a tarball or image ref
     if [[ "${BASE_INSTALLER}" == tarball:* ]]; then
-      echo "    tarballPath: ${BASE_INSTALLER#tarball:}" >> /tmp/imager-profile.yaml
+      PROFILE_YAML="${PROFILE_YAML}
+    tarballPath: ${BASE_INSTALLER#tarball:}"
     elif [[ "${BASE_INSTALLER}" == oci:* ]]; then
-      echo "    ociPath: ${BASE_INSTALLER#oci:}" >> /tmp/imager-profile.yaml
+      PROFILE_YAML="${PROFILE_YAML}
+    ociPath: ${BASE_INSTALLER#oci:}"
     else
-      echo "    imageRef: ${BASE_INSTALLER}" >> /tmp/imager-profile.yaml
+      PROFILE_YAML="${PROFILE_YAML}
+    imageRef: ${BASE_INSTALLER}"
     fi
   fi
   
   # System extensions
   if [[ ${#SYSTEM_EXTENSIONS[@]} -gt 0 ]]; then
-    echo "  systemExtensions:" >> /tmp/imager-profile.yaml
+    PROFILE_YAML="${PROFILE_YAML}
+  systemExtensions:"
     for ext in "${SYSTEM_EXTENSIONS[@]}"; do
-      echo "    - " >> /tmp/imager-profile.yaml
+      PROFILE_YAML="${PROFILE_YAML}
+    - "
       # Check if it's a tarball, OCI, or image ref
       if [[ "${ext}" == tarball:* ]]; then
-        echo "      tarballPath: ${ext#tarball:}" >> /tmp/imager-profile.yaml
+        PROFILE_YAML="${PROFILE_YAML}
+      tarballPath: ${ext#tarball:}"
       elif [[ "${ext}" == oci:* ]]; then
-        echo "      ociPath: ${ext#oci:}" >> /tmp/imager-profile.yaml
+        PROFILE_YAML="${PROFILE_YAML}
+      ociPath: ${ext#oci:}"
       else
-        echo "      imageRef: ${ext}" >> /tmp/imager-profile.yaml
+        PROFILE_YAML="${PROFILE_YAML}
+      imageRef: ${ext}"
       fi
     done
   fi
@@ -154,28 +164,31 @@ fi
 
 # Add overlay if specified
 if [[ -n "${OVERLAY_NAME}" && -n "${OVERLAY_IMAGE}" ]]; then
-  cat >> /tmp/imager-profile.yaml <<EOF
+  PROFILE_YAML="${PROFILE_YAML}
 overlay:
   name: ${OVERLAY_NAME}
-  image:
-EOF
+  image:"
   # Check if overlay is tarball, OCI, or image ref
   if [[ "${OVERLAY_IMAGE}" == tarball:* ]]; then
-    echo "    tarballPath: ${OVERLAY_IMAGE#tarball:}" >> /tmp/imager-profile.yaml
+    PROFILE_YAML="${PROFILE_YAML}
+    tarballPath: ${OVERLAY_IMAGE#tarball:}"
   elif [[ "${OVERLAY_IMAGE}" == oci:* ]]; then
-    echo "    ociPath: ${OVERLAY_IMAGE#oci:}" >> /tmp/imager-profile.yaml
+    PROFILE_YAML="${PROFILE_YAML}
+    ociPath: ${OVERLAY_IMAGE#oci:}"
   else
-    echo "    imageRef: ${OVERLAY_IMAGE}" >> /tmp/imager-profile.yaml
+    PROFILE_YAML="${PROFILE_YAML}
+    imageRef: ${OVERLAY_IMAGE}"
   fi
 fi
 
-# Add output configuration
+# Run imager with profile
 cat <<EOF | docker run \
             --rm -i \
             -v "${PWD}/${OUTPUT_DIR}:/out" \
             -v /dev:/dev \
             --privileged \
             "${IMAGER_IMAGE}:${VERSION}" - --output /out
+${PROFILE_YAML}
 output:
   kind: image
   imageOptions:
