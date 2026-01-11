@@ -11,6 +11,15 @@ overlay_version: v0.6.7
 # Kernel modules to add and remove for Raspberry Pi 5 support
 modules:
   remove:
+    # Modules that don't exist in kernel 6.18.4
+    - kernel/drivers/gpu/drm/drm_gpuvm.ko
+    - kernel/drivers/irqchip/irq-bcm2712-mip.ko
+    - kernel/drivers/mmc/host/sdhci-uhs2.ko
+    - kernel/drivers/net/ethernet/intel/idpf/idpf.ko
+    - kernel/drivers/net/ethernet/intel/libeth/libeth_xdp.ko
+    - kernel/drivers/net/ethernet/intel/libie/libie_adminq.ko
+    - kernel/drivers/net/ethernet/intel/libie/libie_fwlog.ko
+    - kernel/drivers/gpu/drm/display/drm_dp_aux_bus.ko
     # Crypto modules being reorganized
     - kernel/crypto/async_tx/async_xor.ko
     - kernel/crypto/xor.ko
@@ -258,7 +267,6 @@ modules:
     - kernel/drivers/gpu/drm/drm_buddy.ko
     - kernel/drivers/gpu/drm/drm_vram_helper.ko
     - kernel/drivers/gpu/drm/hisilicon/hibmc/hibmc-drm.ko
-    - kernel/drivers/gpu/drm/display/drm_dp_aux_bus.ko
     - kernel/drivers/gpu/drm/drm_exec.ko
     # GPU - AMD
     - kernel/drivers/gpu/drm/amd/amdxcp/amdxcp.ko
