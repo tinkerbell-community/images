@@ -1,7 +1,7 @@
 # Build Configuration - extracted from config.yaml
-PKGS_VERSION = $(shell yq eval '.pkgs_version' config.yaml')
-TALOS_VERSION = $(shell yq eval '.talos_version' config.yaml')
-SBCOVERLAY_VERSION = $(shell yq eval '.overlay_version' config.yaml)
+PKGS_VERSION = $(shell yq '.pkgs_version' config.yaml')
+TALOS_VERSION = $(shell yq '.talos_version' config.yaml')
+SBCOVERLAY_VERSION = $(shell yq '.overlay_version' config.yaml')
 RPI_KERNEL_REF ?= rpi-6.18.y
 
 # Determine major version for patch selection
@@ -135,7 +135,7 @@ vendor-clean:
 	rm -rf "$(VENDOR_DIRECTORY)/sbc-raspberrypi"
 
 .PHONY: vendor-all
-vendor-all: | vendor $(VENDOR_DIRECTORY)/pkgs $(VENDOR_DIRECTORY)/talos $(VENDOR_DIRECTORY)/sbc-raspberrypi
+vendor-all: vendor $(VENDOR_DIRECTORY)/pkgs $(VENDOR_DIRECTORY)/talos $(VENDOR_DIRECTORY)/sbc-raspberrypi
 
 #
 # Patches
