@@ -317,6 +317,36 @@ modules:
     - kernel/drivers/net/usb/kalmia.ko
     - kernel/drivers/net/usb/usbnet.ko
     - kernel/drivers/net/usb/dm9601.ko
+    - kernel/drivers/net/usb/lan78xx.ko
+    # Raspberry Pi specific modules
+    - kernel/drivers/staging/vc04_services/vchiq-mmal/bcm2835-mmal-vchiq.ko
+    - kernel/drivers/staging/vc04_services/bcm2835-audio/snd-bcm2835.ko
+    - kernel/drivers/staging/vc04_services/bcm2835-camera/bcm2835-v4l2.ko
+    - kernel/drivers/char/broadcom/bcm2835-gpiomem.ko
+    - kernel/drivers/mailbox/bcm2835-mailbox.ko
+    - kernel/drivers/watchdog/bcm2835_wdt.ko
+    - kernel/drivers/soc/bcm/bcm2835-power.ko
+    - kernel/drivers/clk/bcm/clk-raspberrypi.ko
+    - kernel/drivers/firmware/raspberrypi.ko
+    - kernel/drivers/gpio/gpio-raspberrypi-exp.ko
+    - kernel/drivers/nvmem/nvmem-rmem.ko
+    - kernel/drivers/nvmem/nvmem_raspberrypi_otp.ko
+    - kernel/drivers/pwm/pwm-brcmstb.ko
+    - kernel/drivers/pwm/pwm-gpio.ko
+    - kernel/drivers/reset/reset-raspberrypi.ko
+    - kernel/drivers/rtc/rtc-rpi.ko
+    - kernel/drivers/thermal/broadcom/bcm2711_thermal.ko
+    - kernel/drivers/thermal/broadcom/bcm2835_thermal.ko
+    # Raspberry Pi 5 RP1 modules
+    - kernel/drivers/firmware/rp1.ko
+    - kernel/drivers/mailbox/bcm-mbox-rp1.ko
+    - kernel/drivers/hwmon/rp1-adc.ko
+    - kernel/drivers/media/platform/raspberrypi/rp1-cfe/rp1-cfe.ko
+    - kernel/drivers/gpu/drm/rp1/rp1-dsi.ko
+    - kernel/drivers/gpu/drm/rp1/rp1-dpi.ko
+    - kernel/drivers/gpu/drm/rp1/rp1-vec.ko
+    - kernel/sound/soc/bcm/rp1-audio-out.ko
+    - kernel/drivers/pwm/pwm-pio-rp1.ko
 
 # Kernel config options to add and remove for Raspberry Pi 4 and 5 support
 configs:
@@ -346,27 +376,27 @@ configs:
     - CONFIG_FIRMWARE_RP1=y
     - CONFIG_BLK_DEV_NVME=y
     - CONFIG_BCM2835_SMI=m
-    - CONFIG_HP_ILO=y
+    - CONFIG_HP_ILO=m
     - CONFIG_RP1_PIO=y
     - CONFIG_WS2812_PIO_RP1=y
-    - CONFIG_SCSI_HPSA=y
-    - CONFIG_MEGARAID_SAS=y
-    - CONFIG_SCSI_MPT3SAS=y
-    - CONFIG_SCSI_SMARTPQI=y
+    - CONFIG_SCSI_HPSA=m
+    - CONFIG_MEGARAID_SAS=m
+    - CONFIG_SCSI_MPT3SAS=m
+    - CONFIG_SCSI_SMARTPQI=m
     - CONFIG_SATA_AHCI=y
-    - CONFIG_PATA_AMD=y
-    - CONFIG_PATA_MARVELL=y
-    - CONFIG_PATA_OLDPIIX=y
-    - CONFIG_PATA_SCH=y
+    - CONFIG_PATA_AMD=m
+    - CONFIG_PATA_MARVELL=m
+    - CONFIG_PATA_OLDPIIX=m
+    - CONFIG_PATA_SCH=m
     - CONFIG_BCACHE=y
     - CONFIG_MDIO=y
-    - CONFIG_AQTION=y
-    - CONFIG_BNX2=y
-    - CONFIG_TIGON3=y
-    - CONFIG_BNX2X=y
-    - CONFIG_BNXT=y
-    - CONFIG_CAVIUM_PTP=y
-    - CONFIG_ENIC=y
+    - CONFIG_AQTION=m
+    - CONFIG_BNX2=m
+    - CONFIG_TIGON3=m
+    - CONFIG_BNX2X=m
+    - CONFIG_BNXT=m
+    - CONFIG_CAVIUM_PTP=m
+    - CONFIG_ENIC=m
     - CONFIG_LIBETH=y
     - CONFIG_LIBIE=y
     - CONFIG_E100=y
@@ -381,11 +411,11 @@ configs:
     - CONFIG_I40EVF=y
     - CONFIG_ICE=y
     - CONFIG_IGC=y
-    - CONFIG_SKY2=y
-    - CONFIG_QLCNIC=y
-    - CONFIG_QED=y
-    - CONFIG_QEDE=y
-    - CONFIG_8139TOO=y
+    - CONFIG_SKY2=m
+    - CONFIG_QLCNIC=m
+    - CONFIG_QED=m
+    - CONFIG_QEDE=m
+    - CONFIG_8139TOO=m
     - CONFIG_R8169=y
     - CONFIG_STMMAC_ETH=y
     - CONFIG_STMMAC_PLATFORM=y
@@ -400,16 +430,18 @@ configs:
     - CONFIG_DWMAC_IMX8=y
     - CONFIG_DWMAC_TEGRA=y
     - CONFIG_STMMAC_PCI=y
-    - CONFIG_DP83867_PHY=y
-    - CONFIG_PCS_XPCS=y
+    - CONFIG_DP83867_PHY=m
+    - CONFIG_PCS_XPCS=m
+    - CONFIG_BCMGENET=y
     - CONFIG_USB_RTL8152=y
+    - CONFIG_USB_LAN78XX=y
     - CONFIG_VMXNET3=y
     - CONFIG_BCM2835_SMI_DEV=m
     - CONFIG_RASPBERRYPI_GPIOMEM=y
-    - CONFIG_I2C_MUX=y
-    - CONFIG_I2C_ALGOBIT=y
+    - CONFIG_I2C_MUX=m
+    - CONFIG_I2C_ALGOBIT=m
     - CONFIG_I2C_BCM2708=y
-    - CONFIG_I2C_I801=y
+    - CONFIG_I2C_I801=m
     - CONFIG_SPI_GPIO=y
     - CONFIG_SPI_RP2040_GPIO_BRIDGE=y
     - CONFIG_PINCTRL_MCP23S08=y
@@ -418,6 +450,9 @@ configs:
     - CONFIG_GPIO_BCM_VIRT=y
     - CONFIG_BCM2835_THERMAL=y
     - CONFIG_MFD_RASPBERRYPI_POE_HAT=y
+    - CONFIG_MFD_RP1=y
+    - CONFIG_FB_BCM2708=y
+    - CONFIG_FB_RPISENSE=y
     - CONFIG_MFD_RP1=y
     - CONFIG_FB_BCM2708=y
     - CONFIG_FB_RPISENSE=y
