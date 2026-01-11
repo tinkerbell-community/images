@@ -1,6 +1,7 @@
 # Raspberry Pi 5 Configuration for Talos
 # This file defines the current Talos version and all modifications needed for RPi5 support
 
+# renovate: datasource=github-releases extractVersion=^v(?<version>.*)$ depName=siderolabs/talos
 talos_version: v1.12.1
 
 # Kernel modules to add and remove for Raspberry Pi 5 support
