@@ -1,7 +1,7 @@
-# Build Configuration
-PKGS_VERSION = v1.12.0
-TALOS_VERSION = v1.12.1
-SBCOVERLAY_VERSION = main
+# Build Configuration - extracted from config.yaml
+PKGS_VERSION = $(shell yq eval '.pkgs_version' config.yaml)
+TALOS_VERSION = $(shell yq eval '.talos_version' config.yaml)
+SBCOVERLAY_VERSION = $(shell yq eval '.overlay_version' config.yaml)
 RPI_KERNEL_REF ?= rpi-6.18.y
 
 # Determine major version for patch selection

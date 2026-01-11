@@ -59,7 +59,8 @@
             "versioning": "regex:^(?<major>\\d+)\\.?(?<minor>\\d+)?\\.?(?<patch>\\d+)?$",
             "matchPackageNames": [
                 "siderolabs/pkgs",
-                "siderolabs/talos"
+                "siderolabs/talos",
+                "tinkerbell-community/sbc-raspberrypi"
             ]
         }
     ],
