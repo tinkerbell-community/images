@@ -1,6 +1,6 @@
 # Build Configuration - extracted from config.yaml
-PKGS_VERSION = $(shell yq eval '.pkgs_version' config.yaml | sed 's/-dirty$$//')
-TALOS_VERSION = $(shell yq eval '.talos_version' config.yaml | sed 's/-dirty$$//')
+PKGS_VERSION = $(shell yq eval '.pkgs_version' config.yaml')
+TALOS_VERSION = $(shell yq eval '.talos_version' config.yaml')
 SBCOVERLAY_VERSION = $(shell yq eval '.overlay_version' config.yaml)
 RPI_KERNEL_REF ?= rpi-6.18.y
 
@@ -141,21 +141,19 @@ vendor-all: | vendor $(VENDOR_DIRECTORY)/pkgs $(VENDOR_DIRECTORY)/talos $(VENDOR
 # Patches
 #
 .PHONY: patches-pkgs patches-talos patches
-patches-pkgs: | $(VENDOR_DIRECTORY)/pkgs
+patches-pkgs: $(VENDOR_DIRECTORY)/pkgs
 	@echo "Merging RPI5 kernel config fragment (using yq)..."
 	./scripts/merge-config-yq.sh -c $(VENDOR_DIRECTORY)/pkgs/kernel/build/config-arm64 -f $(PATCHES_DIRECTORY)/rpi5-config.fragment
 	@echo "Updating Raspberry Pi kernel version..."
 	./scripts/update-rpi-kernel.sh $(RPI_KERNEL_REF)
 
-patches-talos: | $(VENDOR_DIRECTORY)/talos
+patches-talos: $(VENDOR_DIRECTORY)/talos
 	@echo "Applying module changes for Raspberry Pi 5..."
 	./scripts/apply-module-changes.sh
 
 patches: patches-pkgs patches-talos
 
-
-IMAGES = kernel overlay installer
-RELEASES = $(addprefix release-,$(IMAGES))
+PKGS_TAG = $(shell cd $(VENDOR_DIRECTORY)/pkgs && git describe --tag --always --dirty --match v[0-9]\*)
 
 #
 # Kernel
@@ -176,7 +174,7 @@ overlay: | $(VENDOR_DIRECTORY)/sbc-raspberrypi
 	cd "$(VENDOR_DIRECTORY)/sbc-raspberrypi" && \
 		$(MAKE) \
 			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) IMAGE_TAG=$(SBCOVERLAY_VERSION) PUSH=$(PUSH) \
-			PKGS_PREFIX=$(REGISTRY)/$(REGISTRY_USERNAME) PKGS=$(PKGS_TAG) \
+			PKGS_PREFIX=$(REGISTRY)/$(REGISTRY_USERNAME) PKGS=$(PKGS_VERSION) \
 			INSTALLER_ARCH=arm64 PLATFORM=$(PLATFORM) \
 			PROGRESS=$(PROGRESS) \
 			CI_ARGS="$(CI_ARGS)" \
