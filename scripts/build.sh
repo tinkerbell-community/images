@@ -182,8 +182,7 @@ overlay:
 fi
 
 # Run imager with profile
-cat <<EOF | docker run \
-            --rm -i \
+cat <<EOF | docker run --rm -i \
             -v "${PWD}/${OUTPUT_DIR}:/out" \
             -v /dev:/dev \
             --privileged \

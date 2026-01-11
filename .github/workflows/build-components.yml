@@ -166,7 +166,6 @@ jobs:
               echo "build-amd64=false" >> $GITHUB_OUTPUT
             fi
           fi
-          fi
 
   # Build kernel
   build-kernel:
