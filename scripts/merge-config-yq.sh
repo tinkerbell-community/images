@@ -1,38 +1,38 @@
 #!/bin/bash
 set -euo pipefail
 
-# Apply kernel config fragment using scripts/kconfig/merge_config.sh
-# Uses the official kconfig merge tool from the Linux kernel
+# Apply kernel config from config.yaml using yq
+# Merges kernel configs directly from YAML into kernel .config file
 
 usage() {
-    echo "Usage: $0 -c <config_file> -f <fragment_file> [-v]"
+    echo "Usage: $0 -c <config_file> -y <config_yaml> [-v]"
     echo ""
     echo "Options:"
     echo "  -c <config_file>    Path to kernel config file to modify"
-    echo "  -f <fragment_file>  Path to config fragment file"
+    echo "  -y <config_yaml>    Path to config.yaml file"
     echo "  -v                  Verbose output"
     echo ""
     echo "Example:"
-    echo "  $0 -c vendor/pkgs/kernel/build/config-arm64 -f patches/rpi5-config.fragment"
+    echo "  $0 -c vendor/pkgs/kernel/build/config-arm64 -y config.yaml"
     exit 1
 }
 
 CONFIG_FILE=""
-FRAGMENT_FILE=""
+CONFIG_YAML=""
 VERBOSE=false
 
-while getopts "c:f:vh" opt; do
+while getopts "c:y:vh" opt; do
     case ${opt} in
         c) CONFIG_FILE="${OPTARG}" ;;
-        f) FRAGMENT_FILE="${OPTARG}" ;;
+        y) CONFIG_YAML="${OPTARG}" ;;
         v) VERBOSE=true ;;
         h) usage ;;
         *) usage ;;
     esac
 done
 
-if [[ -z "${CONFIG_FILE}" ]] || [[ -z "${FRAGMENT_FILE}" ]]; then
-    echo "Error: Config file and fragment file are required"
+if [[ -z "${CONFIG_FILE}" ]] || [[ -z "${CONFIG_YAML}" ]]; then
+    echo "Error: Config file and config.yaml are required"
     usage
 fi
 
@@ -41,45 +41,37 @@ if [[ ! -f "${CONFIG_FILE}" ]]; then
     exit 1
 fi
 
-if [[ ! -f "${FRAGMENT_FILE}" ]]; then
-    echo "Error: Fragment file not found: ${FRAGMENT_FILE}"
+if [[ ! -f "${CONFIG_YAML}" ]]; then
+    echo "Error: config.yaml not found: ${CONFIG_YAML}"
     exit 1
 fi
 
 ${VERBOSE} && echo "Merging kernel config using yq..."
 ${VERBOSE} && echo "  Base config: ${CONFIG_FILE}"
-${VERBOSE} && echo "  Fragment: ${FRAGMENT_FILE}"
+${VERBOSE} && echo "  Config YAML: ${CONFIG_YAML}"
 
 # Create temp directory
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
-# Step 1: Convert both files to props format (CONFIG_X=value or CONFIG_X=n for disabled)
-convert_to_props() {
-    local input="$1"
-    local output="$2"
-    
-    # Extract CONFIG_X=value lines directly
-    grep -E '^CONFIG_[A-Z0-9_]+=.*' "${input}" > "${output}" || true
-    
-    # Convert "# CONFIG_X is not set" to "CONFIG_X=n" for yq processing
-    grep -E '^# CONFIG_[A-Z0-9_]+ is not set' "${input}" | \
-        sed 's/^# CONFIG_\([A-Z0-9_]*\) is not set/CONFIG_\1=n/' >> "${output}" || true
-}
-
-# Step 2: Extract header comments from original file
+# Step 1: Extract header comments from original file
 grep -E '^#' "${CONFIG_FILE}" | grep -v 'is not set' > "${TEMP_DIR}/header.txt" || true
 
-# Step 3: Convert files to props
-${VERBOSE} && echo "Converting to props format..."
-convert_to_props "${CONFIG_FILE}" "${TEMP_DIR}/base.props"
-convert_to_props "${FRAGMENT_FILE}" "${TEMP_DIR}/fragment.props"
+# Step 2: Convert base config file to props format (CONFIG_X=value or CONFIG_X=n for disabled)
+${VERBOSE} && echo "Converting base config to props format..."
+grep -E '^CONFIG_[A-Z0-9_]+=.*' "${CONFIG_FILE}" > "${TEMP_DIR}/base.props" || true
+grep -E '^# CONFIG_[A-Z0-9_]+ is not set' "${CONFIG_FILE}" | \
+    sed 's/^# CONFIG_\([A-Z0-9_]*\) is not set/CONFIG_\1=n/' >> "${TEMP_DIR}/base.props" || true
 
-# Step 4: Merge using yq - fragment overrides base
+# Step 3: Extract configs from config.yaml and convert to props format
+${VERBOSE} && echo "Extracting configs from config.yaml..."
+yq eval '.configs | to_entries | .[] | .key + "=" + .value' "${CONFIG_YAML}" > "${TEMP_DIR}/yaml.props"
+
+# Step 4: Merge using yq - yaml configs override base
 ${VERBOSE} && echo "Merging with yq..."
 yq eval-all '. as $item ireduce ({}; . * $item)' \
     -p props -o props \
-    "${TEMP_DIR}/base.props" "${TEMP_DIR}/fragment.props" | \
+    "${TEMP_DIR}/base.props" "${TEMP_DIR}/yaml.props" | \
     sed 's/ *= */=/g' | \
     sort > "${TEMP_DIR}/merged.props"
 

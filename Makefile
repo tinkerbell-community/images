@@ -1,7 +1,7 @@
-# Build Configuration - extracted from config.yaml
-PKGS_VERSION ?= $(shell yq '.pkgs_version' config.yaml)
-TALOS_VERSION ?= $(shell yq '.talos_version' config.yaml)
-SBCOVERLAY_VERSION ?= $(shell yq '.overlay_version' config.yaml)
+# Build Configuration - extracted from Pkgfile
+PKGS_VERSION ?= $(shell yq '.pkgs_version' Pkgfile)
+TALOS_VERSION ?= $(shell yq '.talos_version' Pkgfile)
+SBCOVERLAY_VERSION ?= $(shell yq '.overlay_version' Pkgfile)
 RPI_KERNEL_REF ?= rpi-6.18.y
 
 # Determine major version for patch selection
@@ -29,7 +29,8 @@ PATCHES_DIRECTORY := $(PWD)/patches
 
 .PHONY: help clean list-profiles build rpi arm64 amd64
 .PHONY: vendor vendor-clean patches-pkgs patches-talos patches
-.PHONY: kernel overlay installer release
+.PHONY: kernel overlay installer
+.PHONY: release release-kernel release-overlay release-installer
 .PHONY: download-push-talos
 
 #
@@ -143,7 +144,7 @@ vendor-all: vendor $(VENDOR_DIRECTORY)/pkgs $(VENDOR_DIRECTORY)/talos $(VENDOR_D
 .PHONY: patches-pkgs patches-talos patches
 patches-pkgs: $(VENDOR_DIRECTORY)/pkgs
 	@echo "Merging RPI5 kernel config fragment (using yq)..."
-	./scripts/merge-config-yq.sh -c $(VENDOR_DIRECTORY)/pkgs/kernel/build/config-arm64 -f $(PATCHES_DIRECTORY)/rpi5-config.fragment
+	./scripts/merge-config-yq.sh -c $(VENDOR_DIRECTORY)/pkgs/kernel/build/config-arm64 -y config/kernel.yaml
 	@echo "Updating Raspberry Pi kernel version..."
 	./scripts/update-rpi-kernel.sh $(RPI_KERNEL_REF)
 
@@ -199,16 +200,36 @@ installer: patches-talos
 #
 # Release
 #
+release-kernel:
+	docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/kernel:$(PKGS_TAG) && \
+		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/kernel:$(PKGS_TAG) $(REGISTRY)/$(REGISTRY_USERNAME)/kernel:$(PKGS_VERSION) && \
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/kernel:$(PKGS_VERSION) && \
+		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/kernel:$(PKGS_VERSION) $(REGISTRY)/$(REGISTRY_USERNAME)/kernel:latest && \
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/kernel:latest
+
+release-overlay:
+	docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) && \
+		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:latest && \
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:latest
+
 release-installer:
 	docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_TAG) && \
 		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_TAG) $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) && \
 		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) && \
+		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:latest && \
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:latest && \
 		docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG) && \
 		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG) $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) && \
 		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) && \
+		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) $(REGISTRY)/$(REGISTRY_USERNAME)/installer:latest && \
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer:latest && \
 		docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_TAG) && \
 		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_TAG) $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_VERSION) && \
-		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_VERSION)
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_VERSION) && \
+		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_VERSION) $(REGISTRY)/$(REGISTRY_USERNAME)/imager:latest && \
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/imager:latest
+
+release: release-kernel release-overlay release-installer
 
 #
 # Clean

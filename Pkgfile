@@ -1,0 +1,8 @@
+# Dependency Versions
+# This file tracks upstream dependencies
+# renovate: datasource=github-releases extractVersion=^v(?<version>.*)$ depName=siderolabs/talos
+talos_version: v1.12.1
+# renovate: datasource=github-releases extractVersion=^v(?<version>.*)$ depName=siderolabs/pkgs
+pkgs_version: v1.12.0
+# renovate: datasource=github-releases extractVersion=^v(?<version>.*)$ depName=tinkerbell-community/sbc-raspberrypi
+overlay_version: v0.6.7

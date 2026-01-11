@@ -1,0 +1,58 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":dependencyDashboard"
+  ],
+  "labels": ["dependencies", "automated"],
+  "separateMinorPatch": true,
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "packageRules": [
+    {
+      "description": "Talos version from Pkgfile",
+      "matchFiles": ["Pkgfile"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) extractVersion=(?<extractVersion>.*?) depName=(?<depName>.*?)\\s+talos_version:\\s*(?<currentValue>.*?)\\s"
+      ],
+      "groupName": "Talos",
+      "automerge": false
+    },
+    {
+      "description": "PKGs version from Pkgfile",
+      "matchFiles": ["Pkgfile"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) extractVersion=(?<extractVersion>.*?) depName=(?<depName>.*?)\\s+pkgs_version:\\s*(?<currentValue>.*?)\\s"
+      ],
+      "groupName": "PKGs",
+      "automerge": false
+    },
+    {
+      "description": "Overlay version from Pkgfile",
+      "matchFiles": ["Pkgfile"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) extractVersion=(?<extractVersion>.*?) depName=(?<depName>.*?)\\s+overlay_version:\\s*(?<currentValue>.*?)\\s"
+      ],
+      "groupName": "SBC Overlay",
+      "automerge": false
+    },
+    {
+      "description": "Auto-merge minor and patch updates",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash"
+    },
+    {
+      "description": "Require approval for major updates",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "automerge": true
+  },
+  "timezone": "UTC",
+  "schedule": ["after 10pm every weekday", "before 5am every weekday", "every weekend"]
+}
