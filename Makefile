@@ -191,7 +191,7 @@ installer: patches-talos
 			INSTALLER_ARCH=arm64 PLATFORM=$(PLATFORM) \
 			PROGRESS=$(PROGRESS) \
 			CI_ARGS="$(CI_ARGS)" \
-			IMAGER_ARGS="--overlay-name=rpi_generic --base-installer-image=$(REGISTRY)/$(REGISTRY_USERNAME)//installer-base:$(TALOS_TAG) --overlay-image=$(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) --system-extension-image=$(EXTENSIONS)" \
+			IMAGER_ARGS="--overlay-name=rpi_generic --base-installer-image=$(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_TAG) --overlay-image=$(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) --system-extension-image=$(EXTENSIONS)" \
 			kernel initramfs imager installer-base installer
 
 #
