@@ -153,6 +153,10 @@ patches-talos: | $(VENDOR_DIRECTORY)/talos
 
 patches: patches-pkgs patches-talos
 
+
+IMAGES = kernel overlay installer
+RELEASES = $(addprefix release-,$(IMAGES))
+
 #
 # Kernel
 #
@@ -197,10 +201,13 @@ installer: patches-talos
 #
 # Release
 #
-release:
-	docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) && \
-		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TAG) && \
-		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TAG)
+release-installer:
+	docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_TAG) && \
+		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_TAG) $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) && \
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) && \
+		docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG) && \
+		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG) $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) && \
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION)
 
 #
 # Clean
