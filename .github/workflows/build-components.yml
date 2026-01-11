@@ -372,6 +372,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Set up Crane
+        uses: imjasonh/setup-crane@v0.1
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -457,6 +460,24 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up ORAS
+        uses: oras-project/setup-oras@v1
+        with:
+          version: 1.1.0
+
+      - name: Set up Crane
+        uses: imjasonh/setup-crane@v0.1
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Get configuration
         id: config
         run: |
@@ -471,6 +492,48 @@ jobs:
           REGISTRY: ${{ env.REGISTRY }}
           REGISTRY_USERNAME: tinkerbell-community
         run: make rpi
+
+      - name: Verify built image
+        run: |
+          ls -lh _out/
+
+          # Find the built image file
+          image_file=$(find _out/ -name "*.raw.zst" | head -1)
+
+          if [ -z "$image_file" ]; then
+            echo "Error: No image file found in _out/"
+            exit 1
+          fi
+
+          echo "Found image: $image_file"
+          echo "IMAGE_FILE=$image_file" >> $GITHUB_ENV
+
+      - name: Push to OCI Registry
+        env:
+          TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
+        run: |
+          # Construct the OCI image tag following the pattern:
+          # ghcr.io/tinkerbell-community/talos/arm64/nocloud:${VERSION}.zst
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:${TALOS_VERSION}.zst"
+
+          echo "Pushing to: $image_tag"
+
+          # Push using ORAS with the specified artifact type
+          oras push "$image_tag" \
+            --artifact-type application/vnd.acme.rocket.config \
+            "$IMAGE_FILE"
+
+          echo "Successfully pushed $image_tag"
+
+          # Also tag as latest for the platform
+          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:latest"
+          echo "Tagging as latest: $latest_tag"
+
+          oras push "$latest_tag" \
+            --artifact-type application/vnd.acme.rocket.config \
+            "$IMAGE_FILE"
+
+          echo "Successfully pushed $latest_tag"
 
       - name: Upload Raspberry Pi image
         uses: actions/upload-artifact@v4
@@ -504,6 +567,24 @@ jobs:
           talos_version=$(yq '.talos_version' Pkgfile)
           echo "talos_version=$talos_version" >> $GITHUB_OUTPUT
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up ORAS
+        uses: oras-project/setup-oras@v1
+        with:
+          version: 1.1.0
+
+      - name: Set up Crane
+        uses: imjasonh/setup-crane@v0.1
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up vendor repositories
         run: make vendor-all
 
@@ -512,6 +593,48 @@ jobs:
           REGISTRY: ${{ env.REGISTRY }}
           REGISTRY_USERNAME: tinkerbell-community
         run: make arm64
+
+      - name: Verify built image
+        run: |
+          ls -lh _out/
+
+          # Find the built image file
+          image_file=$(find _out/ -name "*.raw.zst" | head -1)
+
+          if [ -z "$image_file" ]; then
+            echo "Error: No image file found in _out/"
+            exit 1
+          fi
+
+          echo "Found image: $image_file"
+          echo "IMAGE_FILE=$image_file" >> $GITHUB_ENV
+
+      - name: Push to OCI Registry
+        env:
+          TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
+        run: |
+          # Construct the OCI image tag following the pattern:
+          # ghcr.io/tinkerbell-community/talos/arm64/nocloud:${VERSION}.zst
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:${TALOS_VERSION}.zst"
+
+          echo "Pushing to: $image_tag"
+
+          # Push using ORAS with the specified artifact type
+          oras push "$image_tag" \
+            --artifact-type application/vnd.acme.rocket.config \
+            "$IMAGE_FILE"
+
+          echo "Successfully pushed $image_tag"
+
+          # Also tag as latest for the platform
+          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:latest"
+          echo "Tagging as latest: $latest_tag"
+
+          oras push "$latest_tag" \
+            --artifact-type application/vnd.acme.rocket.config \
+            "$IMAGE_FILE"
+
+          echo "Successfully pushed $latest_tag"
 
       - name: Upload ARM64 image
         uses: actions/upload-artifact@v4
@@ -545,6 +668,24 @@ jobs:
           talos_version=$(yq '.talos_version' Pkgfile)
           echo "talos_version=$talos_version" >> $GITHUB_OUTPUT
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up ORAS
+        uses: oras-project/setup-oras@v1
+        with:
+          version: 1.1.0
+
+      - name: Set up Crane
+        uses: imjasonh/setup-crane@v0.1
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up vendor repositories
         run: make vendor-all
 
@@ -553,6 +694,48 @@ jobs:
           REGISTRY: ${{ env.REGISTRY }}
           REGISTRY_USERNAME: tinkerbell-community
         run: make amd64
+
+      - name: Verify built image
+        run: |
+          ls -lh _out/
+
+          # Find the built image file
+          image_file=$(find _out/ -name "*.raw.zst" | head -1)
+
+          if [ -z "$image_file" ]; then
+            echo "Error: No image file found in _out/"
+            exit 1
+          fi
+
+          echo "Found image: $image_file"
+          echo "IMAGE_FILE=$image_file" >> $GITHUB_ENV
+
+      - name: Push to OCI Registry
+        env:
+          TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
+        run: |
+          # Construct the OCI image tag following the pattern:
+          # ghcr.io/tinkerbell-community/talos/amd64/nocloud:${VERSION}.zst
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/amd64/nocloud:${TALOS_VERSION}.zst"
+
+          echo "Pushing to: $image_tag"
+
+          # Push using ORAS with the specified artifact type
+          oras push "$image_tag" \
+            --artifact-type application/vnd.acme.rocket.config \
+            "$IMAGE_FILE"
+
+          echo "Successfully pushed $image_tag"
+
+          # Also tag as latest for the platform
+          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/amd64/nocloud:latest"
+          echo "Tagging as latest: $latest_tag"
+
+          oras push "$latest_tag" \
+            --artifact-type application/vnd.acme.rocket.config \
+            "$IMAGE_FILE"
+
+          echo "Successfully pushed $latest_tag"
 
       - name: Upload AMD64 image
         uses: actions/upload-artifact@v4
