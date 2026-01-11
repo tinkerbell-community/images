@@ -14,8 +14,6 @@ on:
           - arm64
           - amd64
           - rpi
-          - arm64
-          - amd64
           - images
           - all
   push:
