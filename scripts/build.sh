@@ -145,18 +145,15 @@ input:"
     PROFILE_YAML="${PROFILE_YAML}
   systemExtensions:"
     for ext in "${SYSTEM_EXTENSIONS[@]}"; do
-      PROFILE_YAML="${PROFILE_YAML}
-    - "
-      # Check if it's a tarball, OCI, or image ref
       if [[ "${ext}" == tarball:* ]]; then
         PROFILE_YAML="${PROFILE_YAML}
-      tarballPath: ${ext#tarball:}"
+    - tarballPath: ${ext#tarball:}"
       elif [[ "${ext}" == oci:* ]]; then
         PROFILE_YAML="${PROFILE_YAML}
-      ociPath: ${ext#oci:}"
+    - ociPath: ${ext#oci:}"
       else
         PROFILE_YAML="${PROFILE_YAML}
-      imageRef: ${ext}"
+    - imageRef: ${ext}"
       fi
     done
   fi
@@ -181,20 +178,24 @@ overlay:
   fi
 fi
 
-# Run imager with profile
-cat <<EOF | docker run --rm -i \
-            -v "${PWD}/${OUTPUT_DIR}:/out" \
-            -v /dev:/dev \
-            --privileged \
-            "${IMAGER_IMAGE}:${VERSION}" -
-${PROFILE_YAML}
+PROFILE_YAML="${PROFILE_YAML}
 output:
   kind: image
   imageOptions:
     diskFormat: ${DISK_FORMAT}
     diskSize: ${DISK_SIZE}
   outFormat: .${COMPRESSION}
-EOF
+"
+
+echo "Profile:"
+echo "${PROFILE_YAML}"
+
+# Run imager with profile
+echo "${PROFILE_YAML}" | docker run --rm -i \
+            -v "${PWD}/${OUTPUT_DIR}:/out" \
+            -v /dev:/dev \
+            --privileged \
+            "${IMAGER_IMAGE}:${VERSION}" -
 
 echo ""
 echo "Build complete! Output in: ${OUTPUT_DIR}"
