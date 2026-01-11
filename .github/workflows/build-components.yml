@@ -498,7 +498,7 @@ jobs:
           ls -lh _out/
 
           # Find the built image file
-          image_file=$(find _out/ -name "*.raw.zst" | head -1)
+          image_file=$(find _out/ -name "*.raw.xz" | head -1)
 
           if [ -z "$image_file" ]; then
             echo "Error: No image file found in _out/"
@@ -513,8 +513,8 @@ jobs:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
         run: |
           # Construct the OCI image tag following the pattern:
-          # ghcr.io/tinkerbell-community/talos/arm64/nocloud:${VERSION}.zst
-          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:${TALOS_VERSION}.zst"
+          # ghcr.io/tinkerbell-community/talos/arm64/nocloud:${VERSION}.xz
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:${TALOS_VERSION}.xz"
 
           echo "Pushing to: $image_tag"
 
@@ -539,7 +539,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: talos-rpi-${{ steps.config.outputs.talos_version }}
-          path: _out/*.raw.zst
+          path: _out/*.raw.xz
           if-no-files-found: error
 
   # Build generic ARM64 image
@@ -599,7 +599,7 @@ jobs:
           ls -lh _out/
 
           # Find the built image file
-          image_file=$(find _out/ -name "*.raw.zst" | head -1)
+          image_file=$(find _out/ -name "*.raw.xz" | head -1)
 
           if [ -z "$image_file" ]; then
             echo "Error: No image file found in _out/"
@@ -614,8 +614,8 @@ jobs:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
         run: |
           # Construct the OCI image tag following the pattern:
-          # ghcr.io/tinkerbell-community/talos/arm64/nocloud:${VERSION}.zst
-          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:${TALOS_VERSION}.zst"
+          # ghcr.io/tinkerbell-community/talos/arm64/nocloud:${VERSION}.xz
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:${TALOS_VERSION}.xz"
 
           echo "Pushing to: $image_tag"
 
@@ -640,7 +640,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: talos-arm64-${{ steps.config.outputs.talos_version }}
-          path: _out/*.raw.zst
+          path: _out/*.raw.xz
           if-no-files-found: error
 
   # Build AMD64 image
@@ -700,7 +700,7 @@ jobs:
           ls -lh _out/
 
           # Find the built image file
-          image_file=$(find _out/ -name "*.raw.zst" | head -1)
+          image_file=$(find _out/ -name "*.raw.xz" | head -1)
 
           if [ -z "$image_file" ]; then
             echo "Error: No image file found in _out/"
@@ -715,8 +715,8 @@ jobs:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
         run: |
           # Construct the OCI image tag following the pattern:
-          # ghcr.io/tinkerbell-community/talos/amd64/nocloud:${VERSION}.zst
-          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/amd64/nocloud:${TALOS_VERSION}.zst"
+          # ghcr.io/tinkerbell-community/talos/amd64/nocloud:${VERSION}.xz
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/amd64/nocloud:${TALOS_VERSION}.xz"
 
           echo "Pushing to: $image_tag"
 
@@ -741,5 +741,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: talos-amd64-${{ steps.config.outputs.talos_version }}
-          path: _out/*.raw.zst
+          path: _out/*.raw.xz
           if-no-files-found: error
