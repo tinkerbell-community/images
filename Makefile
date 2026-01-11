@@ -211,8 +211,8 @@ amd64:
 		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
 		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) \
 		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
-    --extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
-    --extension ghcr.io/siderolabs/intel-ucode:20231114
+		--extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
+		--extension ghcr.io/siderolabs/intel-ucode:20231114
 
 #
 # Clean
