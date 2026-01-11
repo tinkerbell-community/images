@@ -1,3 +1,4 @@
+# Installer patches
 modules:
   remove:
     # Modules that don't exist in kernel 6.18.4
