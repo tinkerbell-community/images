@@ -24,7 +24,28 @@ fi
 
 KERNEL_REF="$1"
 REPO_URL="https://github.com/raspberrypi/linux"
-TARBALL_URL="${REPO_URL}/archive/${KERNEL_REF}.tar.gz"
+
+echo "Updating Raspberry Pi kernel to: $KERNEL_REF"
+echo ""
+
+echo "Getting commit hash..."
+# Try as a branch first, then as a tag
+COMMIT_SHA=$(curl -fsSL "https://api.github.com/repos/raspberrypi/linux/git/refs/heads/${KERNEL_REF}" 2>/dev/null | \
+    grep '"sha"' | head -1 | sed -E 's/.*"sha": "([^"]*)".*/\1/')
+
+if [ -z "$COMMIT_SHA" ]; then
+    # Try as a tag
+    COMMIT_SHA=$(curl -fsSL "https://api.github.com/repos/raspberrypi/linux/git/refs/tags/${KERNEL_REF}" 2>/dev/null | \
+        grep '"sha"' | head -1 | sed -E 's/.*"sha": "([^"]*)".*/\1/')
+fi
+
+if [ -z "$COMMIT_SHA" ]; then
+    echo "Error: Could not retrieve commit hash for ref $KERNEL_REF"
+    exit 1
+fi
+
+# Use commit SHA for stable tarball URL
+TARBALL_URL="${REPO_URL}/archive/${COMMIT_SHA}.tar.gz"
 
 if [ ! -f "$PKGFILE" ]; then
     echo "Error: Pkgfile not found at $PKGFILE"
@@ -35,9 +56,6 @@ if [ ! -f "$PKG_YAML" ]; then
     echo "Error: pkg.yaml not found at $PKG_YAML"
     exit 1
 fi
-
-echo "Updating Raspberry Pi kernel to: $KERNEL_REF"
-echo ""
 
 # Download tarball to temporary location
 TEMP_DIR=$(mktemp -d)
@@ -56,22 +74,6 @@ echo "Calculating checksums..."
 SHA256=$(shasum -a 256 "$TARBALL" | awk '{print $1}')
 SHA512=$(shasum -a 512 "$TARBALL" | awk '{print $1}')
 
-echo "Getting commit hash..."
-# Try as a branch first, then as a tag
-COMMIT_SHA=$(curl -fsSL "https://api.github.com/repos/raspberrypi/linux/git/refs/heads/${KERNEL_REF}" 2>/dev/null | \
-    grep '"sha"' | head -1 | sed 's/.*"sha": "\([^"]*\)".*/\1/')
-
-if [ -z "$COMMIT_SHA" ]; then
-    # Try as a tag
-    COMMIT_SHA=$(curl -fsSL "https://api.github.com/repos/raspberrypi/linux/git/refs/tags/${KERNEL_REF}" 2>/dev/null | \
-        grep '"sha"' | head -1 | sed 's/.*"sha": "\([^"]*\)".*/\1/')
-fi
-
-if [ -z "$COMMIT_SHA" ]; then
-    echo "Error: Could not retrieve commit hash for ref $KERNEL_REF"
-    exit 1
-fi
-
 echo ""
 echo "Kernel Ref:    $KERNEL_REF"
 echo "Commit SHA:    $COMMIT_SHA"
@@ -85,11 +87,8 @@ echo "Updating $PKGFILE..."
 # Create backup
 cp "$PKGFILE" "${PKGFILE}.bak"
 
-# Update the renovate comment to point to raspberrypi/linux
-sed -i.tmp "s|# renovate: datasource=git-refs.*depName=.*|# renovate: datasource=git-refs versioning=git depName=https://github.com/raspberrypi/linux.git|" "$PKGFILE"
-
 # Update linux_ref
-sed -i.tmp "s/linux_ref: .*/linux_ref: ${COMMIT_SHA}/" "$PKGFILE"
+sed -i.tmp "s/linux_version: .*/linux_ref: ${COMMIT_SHA}/" "$PKGFILE"
 
 # Update linux_sha256
 sed -i.tmp "s/linux_sha256: .*/linux_sha256: ${SHA256}/" "$PKGFILE"

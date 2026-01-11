@@ -96,13 +96,13 @@ amd64:
 vendor:
 	@mkdir -p "$(VENDOR_DIRECTORY)"
 
-"$(VENDOR_DIRECTORY)/pkgs":
+$(VENDOR_DIRECTORY)/pkgs:
 	git clone -c advice.detachedHead=false --branch "$(PKG_VERSION)" "$(PKG_REPOSITORY)" "$(VENDOR_DIRECTORY)/pkgs"
 
-"$(VENDOR_DIRECTORY)/talos":
+$(VENDOR_DIRECTORY)/talos:
 	git clone -c advice.detachedHead=false --branch "$(TALOS_VERSION)" "$(TALOS_REPOSITORY)" "$(VENDOR_DIRECTORY)/talos"
 
-"$(VENDOR_DIRECTORY)/sbc-raspberrypi":
+$(VENDOR_DIRECTORY)/sbc-raspberrypi:
 	git clone -c advice.detachedHead=false --branch "$(SBCOVERLAY_VERSION)" "$(SBCOVERLAY_REPOSITORY)" "$(VENDOR_DIRECTORY)/sbc-raspberrypi"
 
 vendor-clean:
@@ -111,18 +111,19 @@ vendor-clean:
 	rm -rf "$(VENDOR_DIRECTORY)/sbc-raspberrypi"
 
 .PHONY: vendor-all
-vendor-all: vendor "$(VENDOR_DIRECTORY)/pkgs" "$(VENDOR_DIRECTORY)/talos" "$(VENDOR_DIRECTORY)/sbc-raspberrypi"
+vendor-all: | vendor $(VENDOR_DIRECTORY)/pkgs $(VENDOR_DIRECTORY)/talos $(VENDOR_DIRECTORY)/sbc-raspberrypi
 
 #
 # Patches
 #
-patches-pkgs: "$(VENDOR_DIRECTORY)/pkgs"
-	@echo "Applying kernel config changes for Raspberry Pi 5..."
-	./scripts/apply-config-changes.sh "$(VENDOR_DIRECTORY)/pkgs/kernel/build/config-arm64"
-	@echo "Updating Raspberry Pi kernel configuration..."
+.PHONY: patches-pkgs patches-talos patches
+patches-pkgs: | $(VENDOR_DIRECTORY)/pkgs
+	@echo "Merging RPI5 kernel config fragment (using yq)..."
+	./scripts/merge-config-yq.sh -c $(VENDOR_DIRECTORY)/pkgs/kernel/build/config-arm64 -f $(PATCHES_DIRECTORY)/rpi5-config.fragment
+	@echo "Updating Raspberry Pi kernel version..."
 	./scripts/update-rpi-kernel.sh $(RPI_KERNEL_REF)
 
-patches-talos: "$(VENDOR_DIRECTORY)/talos"
+patches-talos: | $(VENDOR_DIRECTORY)/talos
 	@echo "Applying module changes for Raspberry Pi 5..."
 	./scripts/apply-module-changes.sh
 
@@ -141,7 +142,7 @@ kernel: patches-pkgs
 #
 # Overlay
 #
-overlay: "$(VENDOR_DIRECTORY)/sbc-raspberrypi"
+overlay: | $(VENDOR_DIRECTORY)/sbc-raspberrypi
 	@echo SBCOVERLAY_TAG = $(SBCOVERLAY_TAG)
 	cd "$(VENDOR_DIRECTORY)/sbc-raspberrypi" && \
 		$(MAKE) \
