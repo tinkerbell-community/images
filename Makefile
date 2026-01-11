@@ -171,32 +171,26 @@ kernel: patches-pkgs
 overlay: | $(VENDOR_DIRECTORY)/sbc-raspberrypi
 	cd "$(VENDOR_DIRECTORY)/sbc-raspberrypi" && \
 		$(MAKE) \
-			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) IMAGE_TAG=$(SBCOVERLAY_VERSION) PUSH=true \
+			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) IMAGE_TAG=$(SBCOVERLAY_VERSION) PUSH=$(PUSH) \
 			PKGS_PREFIX=$(REGISTRY)/$(REGISTRY_USERNAME) PKGS=$(PKGS_TAG) \
-			INSTALLER_ARCH=arm64 PLATFORM=linux/arm64 \
+			INSTALLER_ARCH=arm64 PLATFORM=$(PLATFORM) \
+			PROGRESS=$(PROGRESS) \
+			CI_ARGS="$(CI_ARGS)" \
 			sbc-raspberrypi
 
 #
 # Installer/Image
 #
-installer: patches-talos kernel overlay
+installer: | patches-talos
 	cd "$(VENDOR_DIRECTORY)/talos" && \
 		$(MAKE) \
-			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) PUSH=true \
+			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) PUSH=$(PUSH) \
 			PKG_KERNEL=$(REGISTRY)/$(REGISTRY_USERNAME)/kernel:$(PKGS_VERSION) \
-			INSTALLER_ARCH=arm64 PLATFORM=linux/arm64 \
+			INSTALLER_ARCH=arm64 PLATFORM=$(PLATFORM) \
+			PROGRESS=$(PROGRESS) \
+			CI_ARGS="$(CI_ARGS)" \
 			IMAGER_ARGS="--overlay-name=rpi_generic --overlay-image=$(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) --system-extension-image=$(EXTENSIONS)" \
 			kernel initramfs imager installer-base installer
-	./scripts/build.sh \
-		--arch arm64 \
-		--platform metal \
-		--version $(TALOS_VERSION) \
-		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
-		--overlay-name rpi_generic \
-		--overlay-image $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) \
-		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) \
-		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
-		--extension ghcr.io/siderolabs/util-linux-tools:2.41.2
 
 #
 # Release

@@ -150,9 +150,20 @@ jobs:
           REGISTRY: ${{ steps.config.outputs.registry }}
           REGISTRY_USERNAME: ${{ steps.config.outputs.username }}
           DOCKER_BUILDKIT: 1
+          BUILDKIT_PROGRESS: plain
         run: |
-          echo "Building overlay..."
-          make overlay
+          echo "Building overlay with optimizations..."
+          
+          # Build with optimized arguments
+          make overlay \
+            PLATFORM=linux/arm64 \
+            PUSH=true \
+            PROGRESS=plain \
+            CI_ARGS="--cache-from=type=registry,ref=${{ steps.config.outputs.registry }}/${{ steps.config.outputs.username }}/sbc-raspberrypi:buildcache \
+                     --cache-to=type=registry,ref=${{ steps.config.outputs.registry }}/${{ steps.config.outputs.username }}/sbc-raspberrypi:buildcache,mode=max \
+                     --build-arg=MAKEFLAGS=-j$(nproc) \
+                     --ulimit nofile=1024000:1024000 \
+                     --shm-size=2g"
 
       - name: Build installer
         if: github.event.inputs.target == '' || github.event.inputs.target == 'installer'
@@ -160,9 +171,20 @@ jobs:
           REGISTRY: ${{ steps.config.outputs.registry }}
           REGISTRY_USERNAME: ${{ steps.config.outputs.username }}
           DOCKER_BUILDKIT: 1
+          BUILDKIT_PROGRESS: plain
         run: |
-          echo "Building installer..."
-          make installer
+          echo "Building installer with optimizations..."
+          
+          # Build with optimized arguments
+          make installer \
+            PLATFORM=linux/arm64 \
+            PUSH=true \
+            PROGRESS=plain \
+            CI_ARGS="--cache-from=type=registry,ref=${{ steps.config.outputs.registry }}/${{ steps.config.outputs.username }}/installer:buildcache \
+                     --cache-to=type=registry,ref=${{ steps.config.outputs.registry }}/${{ steps.config.outputs.username }}/installer:buildcache,mode=max \
+                     --build-arg=MAKEFLAGS=-j$(nproc) \
+                     --ulimit nofile=1024000:1024000 \
+                     --shm-size=2g"
 
       - name: Show ccache statistics
         if: always()
