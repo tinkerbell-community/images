@@ -146,18 +146,10 @@ patches-pkgs: | $(VENDOR_DIRECTORY)/pkgs
 	./scripts/merge-config-yq.sh -c $(VENDOR_DIRECTORY)/pkgs/kernel/build/config-arm64 -f $(PATCHES_DIRECTORY)/rpi5-config.fragment
 	@echo "Updating Raspberry Pi kernel version..."
 	./scripts/update-rpi-kernel.sh $(RPI_KERNEL_REF)
-	cd $(VENDOR_DIRECTORY)/pkgs && \
-	git add . \
-	&& git commit --amend -m 'Update Raspberry Pi kernel version' && \
-	cd -
 
 patches-talos: | $(VENDOR_DIRECTORY)/talos
 	@echo "Applying module changes for Raspberry Pi 5..."
 	./scripts/apply-module-changes.sh
-	cd $(VENDOR_DIRECTORY)/talos && \
-	git add . \
-	&& git commit --amend -m 'Update Talos' && \
-	cd -
 
 patches: patches-pkgs patches-talos
 
@@ -186,6 +178,8 @@ overlay: | $(VENDOR_DIRECTORY)/sbc-raspberrypi
 			CI_ARGS="$(CI_ARGS)" \
 			sbc-raspberrypi
 
+TALOS_TAG = $(shell cd $(VENDOR_DIRECTORY)/talos && git describe --tag --always --dirty --match v[0-9]\*)
+
 #
 # Installer/Image
 #
@@ -197,7 +191,7 @@ installer: patches-talos
 			INSTALLER_ARCH=arm64 PLATFORM=$(PLATFORM) \
 			PROGRESS=$(PROGRESS) \
 			CI_ARGS="$(CI_ARGS)" \
-			IMAGER_ARGS="--overlay-name=rpi_generic --base-installer-image=$(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) --overlay-image=$(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) --system-extension-image=$(EXTENSIONS)" \
+			IMAGER_ARGS="--overlay-name=rpi_generic --base-installer-image=$(REGISTRY)/$(REGISTRY_USERNAME)//installer-base:$(TALOS_TAG) --overlay-image=$(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) --system-extension-image=$(EXTENSIONS)" \
 			kernel initramfs imager installer-base installer
 
 #
