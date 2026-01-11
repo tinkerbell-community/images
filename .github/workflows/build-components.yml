@@ -10,10 +10,10 @@ on:
         options:
           - kernel
           - overlay
-          - installer          - rpi
+          - installer
           - arm64
           - amd64
-          - images          - rpi
+          - rpi
           - arm64
           - amd64
           - images
