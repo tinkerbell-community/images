@@ -1,0 +1,196 @@
+name: Build Components
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target to build"
+        required: true
+        type: choice
+        options:
+          - kernel
+          - overlay
+          - installer
+          - release
+  push:
+    branches:
+      - main
+    paths:
+      - "vendor/pkgs/**"
+      - "vendor/talos/**"
+      - "patches/**"
+      - "scripts/**"
+      - ".github/workflows/build-components.yml"
+  schedule:
+    # Run weekly to rebuild components
+    - cron: "0 4 * * 0"
+
+env:
+  REGISTRY: ghcr.io
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-components:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target != 'release'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get configuration
+        id: config
+        run: |
+          # Extract versions from Makefile
+          pkgs_version=$(grep "^PKGS_VERSION" Makefile | cut -d'=' -f2 | tr -d ' ')
+          talos_version=$(grep "^TALOS_VERSION" Makefile | cut -d'=' -f2 | tr -d ' ')
+          overlay_version=$(grep "^SBCOVERLAY_VERSION" Makefile | cut -d'=' -f2 | tr -d ' ')
+          registry=$(grep "^REGISTRY" Makefile | head -1 | cut -d'=' -f2 | tr -d ' ' | sed 's/?//')
+          username=$(grep "^REGISTRY_USERNAME" Makefile | cut -d'=' -f2 | tr -d ' ' | sed 's/?//')
+
+          echo "pkgs_version=$pkgs_version" >> $GITHUB_OUTPUT
+          echo "talos_version=$talos_version" >> $GITHUB_OUTPUT
+          echo "overlay_version=$overlay_version" >> $GITHUB_OUTPUT
+          echo "registry=${registry:-ghcr.io}" >> $GITHUB_OUTPUT
+          echo "username=${username:-tinkerbell-community}" >> $GITHUB_OUTPUT
+
+          echo "PKGS Version: $pkgs_version"
+          echo "Talos Version: $talos_version"
+          echo "Overlay Version: $overlay_version"
+
+      - name: Set up vendor repositories
+        run: |
+          make vendor-all
+
+      - name: Build kernel
+        if: github.event.inputs.target == '' || github.event.inputs.target == 'kernel'
+        env:
+          REGISTRY: ${{ steps.config.outputs.registry }}
+          REGISTRY_USERNAME: ${{ steps.config.outputs.username }}
+        run: |
+          echo "Building kernel..."
+          make kernel
+
+      - name: Build overlay
+        if: github.event.inputs.target == '' || github.event.inputs.target == 'overlay' || github.event.inputs.target == 'installer'
+        env:
+          REGISTRY: ${{ steps.config.outputs.registry }}
+          REGISTRY_USERNAME: ${{ steps.config.outputs.username }}
+        run: |
+          echo "Building overlay..."
+          make overlay
+
+      - name: Build installer
+        if: github.event.inputs.target == '' || github.event.inputs.target == 'installer'
+        env:
+          REGISTRY: ${{ steps.config.outputs.registry }}
+          REGISTRY_USERNAME: ${{ steps.config.outputs.username }}
+        run: |
+          echo "Building installer..."
+          make installer
+
+      - name: Component summary
+        env:
+          TARGET: ${{ github.event.inputs.target }}
+          PKGS_VERSION: ${{ steps.config.outputs.pkgs_version }}
+          TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
+          OVERLAY_VERSION: ${{ steps.config.outputs.overlay_version }}
+        run: |
+          echo "## Built Components" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**PKGS Version:** ${PKGS_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "**Talos Version:** ${TALOS_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "**Overlay Version:** ${OVERLAY_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Show summary based on what was built
+          if [ -z "${TARGET}" ] || [ "${TARGET}" == "kernel" ]; then
+            echo "### Kernel Image" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "${{ env.REGISTRY }}/${{ steps.config.outputs.username }}/kernel:${PKGS_VERSION}" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -z "${TARGET}" ] || [ "${TARGET}" == "overlay" ] || [ "${TARGET}" == "installer" ]; then
+            echo "### Overlay Image" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "${{ env.REGISTRY }}/${{ steps.config.outputs.username }}/sbc-raspberrypi:${OVERLAY_VERSION}" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -z "${TARGET}" ] || [ "${TARGET}" == "installer" ]; then
+            echo "### Installer Image" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "${{ env.REGISTRY }}/${{ steps.config.outputs.username }}/installer:${TALOS_VERSION}" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Imager Image" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "${{ env.REGISTRY }}/${{ steps.config.outputs.username }}/imager:${TALOS_VERSION}" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+  release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'release' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get configuration
+        id: config
+        run: |
+          talos_version=$(grep "^TALOS_VERSION" Makefile | cut -d'=' -f2 | tr -d ' ')
+          tag="${GITHUB_REF#refs/tags/}"
+
+          echo "talos_version=$talos_version" >> $GITHUB_OUTPUT
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+
+          echo "Creating release: $tag"
+          echo "  Talos Version: $talos_version"
+
+      - name: Create release
+        env:
+          TAG: ${{ steps.config.outputs.tag }}
+          REGISTRY: ${{ env.REGISTRY }}
+          REGISTRY_USERNAME: tinkerbell-community
+        run: |
+          make release
+
+      - name: Release summary
+        env:
+          TAG: ${{ steps.config.outputs.tag }}
+          TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
+        run: |
+          echo "## Released Images" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release Tag:** ${TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "**Based on Talos:** ${TALOS_VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tagged Image" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ env.REGISTRY }}/tinkerbell-community/installer:${TAG}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
