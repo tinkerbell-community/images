@@ -1,5 +1,5 @@
-# Raspberry Pi 5 Configuration for Talos
-# This file defines the current Talos version and all modifications needed for RPi5 support
+# Raspberry Pi 4/5 Configuration for Talos
+# This file defines the current Talos version and all modifications needed for RPi4 and RPi5 support
 
 # renovate: datasource=github-releases extractVersion=^v(?<version>.*)$ depName=siderolabs/talos
 talos_version: v1.12.1
@@ -8,7 +8,7 @@ pkgs_version: v1.12.0
 # renovate: datasource=github-releases extractVersion=^v(?<version>.*)$ depName=tinkerbell-community/sbc-raspberrypi
 overlay_version: v0.6.7
 
-# Kernel modules to add and remove for Raspberry Pi 5 support
+# Kernel modules to add and remove for Raspberry Pi 4 and 5 support
 modules:
   remove:
     # Modules that don't exist in kernel 6.18.4
@@ -318,11 +318,11 @@ modules:
     - kernel/drivers/net/usb/usbnet.ko
     - kernel/drivers/net/usb/dm9601.ko
 
-# Kernel config options to add and remove for Raspberry Pi 5 support
+# Kernel config options to add and remove for Raspberry Pi 4 and 5 support
 configs:
   remove:
     - CONFIG_PAHOLE_VERSION=130
-    - CONFIG_ARM64_4K_PAGES=y
+    - CONFIG_ARM64_16K_PAGES=y
     - CONFIG_BLK_CGROUP_IOLATENCY=y
     - CONFIG_ZPOOL=y
     - CONFIG_ZSWAP=y
@@ -340,7 +340,7 @@ configs:
   add:
     - CONFIG_PAHOLE_VERSION=129
     - CONFIG_HAVE_IMA_KEXEC=y
-    - CONFIG_ARM64_16K_PAGES=y
+    - CONFIG_ARM64_4K_PAGES=y
     - CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND=y
     - CONFIG_NETWORK_PHY_TIMESTAMPING=y
     - CONFIG_FIRMWARE_RP1=y
@@ -423,7 +423,7 @@ configs:
     - CONFIG_FB_RPISENSE=y
 
   disable:
-    - CONFIG_ARM64_4K_PAGES
+    - CONFIG_ARM64_16K_PAGES
     - CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
     - CONFIG_BLK_CGROUP_IOLATENCY
     - CONFIG_ZSWAP_DEFAULT_ON

@@ -1,10 +1,24 @@
-# Raspberry Pi 5 Kernel Configuration Fragment
+# Raspberry Pi 4/5 Kernel Configuration Fragment
 # This file contains only the config options we want to change/add
 # Use with: scripts/kconfig/merge_config.sh or KCONFIG_CONFIG
 
-# Memory Management - Switch from 4K to 16K pages
-# CONFIG_ARM64_4K_PAGES is not set
-CONFIG_ARM64_16K_PAGES=y
+# Memory Management - Keep 4K pages for RPi4 compatibility
+# RPi5 is optimized for 16K but works fine with 4K pages
+CONFIG_ARM64_4K_PAGES=y
+# CONFIG_ARM64_16K_PAGES is not set
+
+# BCM2711 (Raspberry Pi 4) Hardware Support
+CONFIG_ARCH_BCM2835=y
+CONFIG_BCM2711_THERMAL=y
+CONFIG_PINCTRL_BCM2835=y
+CONFIG_SPI_BCM2835=y
+CONFIG_SPI_BCM2835AUX=y
+CONFIG_I2C_BCM2835=y
+CONFIG_PWM_BCM2835=y
+CONFIG_BCMGENET=y
+CONFIG_DRM_VC4=y
+CONFIG_DRM_VC4_HDMI_CEC=y
+CONFIG_SND_BCM2835=y
 
 # BCM2712 (Raspberry Pi 5) Hardware Support
 CONFIG_BCM2712_IOMMU=y
@@ -27,6 +41,9 @@ CONFIG_PWM_PIO_RP1=y
 CONFIG_BCM2835_SMI=m
 CONFIG_BCM2835_SMI_DEV=m
 CONFIG_I2C_BCM2708=y
+CONFIG_BCM2835_VCHIQ=y
+CONFIG_BCM2835_MBOX=y
+CONFIG_BCM2835_WDT=y
 
 # Pin Control & GPIO
 CONFIG_PINCTRL_MCP23S08=y
@@ -41,6 +58,12 @@ CONFIG_RASPBERRYPI_GPIOMEM=y
 CONFIG_NVMEM_RASPBERRYPI_OTP=y
 CONFIG_MFD_RASPBERRYPI_POE_HAT=y
 CONFIG_RTC_DRV_RPI=y
+
+# USB Host Controller (RPi4 uses VL805)
+CONFIG_USB_XHCI_HCD=y
+CONFIG_USB_XHCI_PCI=y
+CONFIG_USB_XHCI_PLATFORM=y
+CONFIG_USB_DWC2=y
 
 # Framebuffer & Display
 CONFIG_FB_BCM2708=y
@@ -133,6 +156,7 @@ CONFIG_STMMAC_PLATFORM=y
 
 # USB Network - Built-in
 CONFIG_USB_RTL8152=y
+CONFIG_USB_LAN78XX=y
 
 # USB Serial - Built-in
 CONFIG_USB_SERIAL_CH341=y

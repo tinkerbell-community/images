@@ -87,12 +87,12 @@ endif
 rpi:
 	./scripts/build.sh \
 		--arch arm64 \
-		--platform metal \
+		--platform nocloud \
 		--version $(TALOS_VERSION) \
 		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
 		--overlay-name rpi_generic \
 		--overlay-image $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) \
-		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) \
+		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) \
 		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
 		--extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
 		--disk-size 1306902528
@@ -207,7 +207,10 @@ release-installer:
 		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) && \
 		docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG) && \
 		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG) $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) && \
-		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION)
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) && \
+		docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_TAG) && \
+		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_TAG) $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_VERSION) && \
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_VERSION)
 
 #
 # Clean

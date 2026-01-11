@@ -187,7 +187,7 @@ cat <<EOF | docker run \
             -v "${PWD}/${OUTPUT_DIR}:/out" \
             -v /dev:/dev \
             --privileged \
-            "${IMAGER_IMAGE}:${VERSION}" - --output /out
+            "${IMAGER_IMAGE}:${VERSION}" -
 ${PROFILE_YAML}
 output:
   kind: image
