@@ -39,9 +39,7 @@ PATCHES_DIRECTORY := $(PWD)/patches
 help:
 	@echo "Talos Images Build Framework"
 	@echo ""
-	@echo "=== Profile-based Builds ==="
-	@echo "  list-profiles  - List all available build profiles"
-	@echo "  build          - Build using a specific profile (PROFILE=<name>)"
+	@echo "=== Machine-image Builds ==="
 	@echo "  rpi            - Build Raspberry Pi image"
 	@echo "  arm64          - Build generic ARM64 image"
 	@echo "  amd64          - Build generic AMD64 image"
@@ -64,56 +62,6 @@ help:
 	@echo "  make rpi"
 	@echo "  make build PROFILE=rpi-generic"
 	@echo "  make vendor patches kernel overlay installer"
-
-#
-# Profile Management
-#
-list-profiles:
-	@echo "Available profiles:"
-	@ls -1 profiles/nocloud/*.yaml 2>/dev/null | sed 's/profiles\/nocloud\//  - /' | sed 's/\.yaml//' || echo "  No profiles found"
-
-#
-# Profile-based Build Targets
-#
-build:
-ifndef PROFILE
-	@echo "Error: PROFILE is required"
-	@echo "Usage: make build PROFILE=<profile-name>"
-	@echo ""
-	@make list-profiles
-	@exit 1
-endif
-	./scripts/build.sh --profile $(PROFILE)
-
-rpi:
-	./scripts/build.sh \
-		--arch arm64 \
-		--platform nocloud \
-		--version $(TALOS_VERSION) \
-		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
-		--overlay-name rpi_generic \
-		--overlay-image $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) \
-		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) \
-		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
-		--extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
-		--disk-size 1306902528
-
-arm64:
-	./scripts/build.sh \
-		--arch arm64 \
-		--platform nocloud \
-		--version $(TALOS_VERSION) \
-		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager
-
-amd64:
-	./scripts/build.sh \
-		--arch amd64 \
-		--platform nocloud \
-		--version $(TALOS_VERSION) \
-		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
-		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
-    --extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
-    --extension ghcr.io/siderolabs/intel-ucode:20231114
 
 #
 # Checkouts
@@ -230,6 +178,41 @@ release-installer:
 		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/imager:latest
 
 release: release-kernel release-overlay release-installer
+
+#
+# Machine Images
+#
+rpi:
+	./scripts/build.sh \
+		--arch arm64 \
+		--platform nocloud \
+		--version $(TALOS_VERSION) \
+		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
+		--overlay-name rpi_generic \
+		--overlay-image $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) \
+		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) \
+		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
+		--extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
+		--disk-size 1306902528
+
+arm64:
+	./scripts/build.sh \
+		--arch arm64 \
+		--platform nocloud \
+		--version $(TALOS_VERSION) \
+		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) \
+		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager
+
+amd64:
+	./scripts/build.sh \
+		--arch amd64 \
+		--platform nocloud \
+		--version $(TALOS_VERSION) \
+		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
+		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) \
+		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
+    --extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
+    --extension ghcr.io/siderolabs/intel-ucode:20231114
 
 #
 # Clean
