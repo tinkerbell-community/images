@@ -1,30 +1,76 @@
-.PHONY: help clean rpi-generic generic-arm64 generic-amd64 list-profiles
+# Build Configuration
+PKG_VERSION = v1.12.0
+TALOS_VERSION = v1.12.1
+SBCOVERLAY_VERSION = main
+RPI_KERNEL_REF ?= rpi-6.18.y
 
-# Default target
+# Determine major version for patch selection
+TALOS_MAJOR_VERSION = $(shell echo $(TALOS_VERSION) | sed 's/v\([0-9]*\)\.\([0-9]*\)\..*/v\1.\2/')
+
+REGISTRY ?= ghcr.io
+REGISTRY_USERNAME ?= tinkerbell-community
+
+TAG ?= $(shell git describe --tags --exact-match)
+
+EXTENSIONS ?= ghcr.io/siderolabs/gvisor:20250505.0@sha256:d7503b59603f030b972ceb29e5e86979e6c889be1596e87642291fee48ce380c
+
+PKG_REPOSITORY = https://github.com/siderolabs/pkgs.git
+TALOS_REPOSITORY = https://github.com/siderolabs/talos.git
+SBCOVERLAY_REPOSITORY = https://github.com/$(REGISTRY_USERNAME)/sbc-raspberrypi.git
+
+VENDOR_DIRECTORY := $(PWD)/vendor
+PATCHES_DIRECTORY := $(PWD)/patches
+
+PKGS_TAG = $(shell cd $(VENDOR_DIRECTORY)/pkgs && git describe --tag --always --dirty --match v[0-9]\*)
+TALOS_TAG = $(shell cd $(VENDOR_DIRECTORY)/talos && git describe --tag --always --dirty --match v[0-9]\*)
+SBCOVERLAY_TAG = $(shell cd $(VENDOR_DIRECTORY)/sbc-raspberrypi5 && git describe --tag --always --dirty)-$(PKGS_TAG)
+
+.PHONY: help clean list-profiles build rpi arm64 amd64
+.PHONY: vendor vendor-clean patches-pkgs patches-talos patches
+.PHONY: kernel overlay installer release
+
+#
+# Help
+#
 help:
 	@echo "Talos Images Build Framework"
 	@echo ""
-	@echo "Available targets:"
-	@echo "  help           - Show this help message"
+	@echo "=== Profile-based Builds ==="
 	@echo "  list-profiles  - List all available build profiles"
-	@echo "  rpi-generic    - Build Raspberry Pi generic image"
-	@echo "  generic-arm64  - Build generic ARM64 image"
-	@echo "  generic-amd64  - Build generic AMD64 image"
-	@echo "  clean          - Remove build artifacts"
+	@echo "  build          - Build using a specific profile (PROFILE=<name>)"
+	@echo "  rpi            - Build Raspberry Pi image"
+	@echo "  arm64          - Build generic ARM64 image"
+	@echo "  amd64          - Build generic AMD64 image"
 	@echo ""
-	@echo "Custom builds:"
-	@echo "  make build PROFILE=<profile-name>"
+	@echo "=== Advanced Build Targets ==="
+	@echo "  vendor         - Clone repositories required for the build"
+	@echo "  patches        - Apply all patches (kernel + config + modules)"
+	@echo "  kernel         - Build kernel"
+	@echo "  overlay        - Build Raspberry Pi 5 overlay"
+	@echo "  installer      - Build installer docker image and disk image"
+	@echo "  release        - Tag images with current Git tag (for final release)"
+	@echo ""
+	@echo "=== Configuration ==="
+	@echo "  RPI_KERNEL_REF - Raspberry Pi kernel tag (default: stable_20250428)"
+	@echo ""
+	@echo "=== Maintenance ==="
+	@echo "  clean          - Remove build artifacts and vendor"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make rpi-generic"
+	@echo "  make rpi"
 	@echo "  make build PROFILE=rpi-generic"
+	@echo "  make vendor patches kernel overlay installer"
 
-# List available profiles
+#
+# Profile Management
+#
 list-profiles:
 	@echo "Available profiles:"
-	@ls -1 profiles/*.yaml 2>/dev/null | sed 's/profiles\//  - /' | sed 's/\.yaml//' || echo "  No profiles found"
+	@ls -1 profiles/nocloud/*.yaml 2>/dev/null | sed 's/profiles\/nocloud\//  - /' | sed 's/\.yaml//' || echo "  No profiles found"
 
-# Generic build target
+#
+# Profile-based Build Targets
+#
 build:
 ifndef PROFILE
 	@echo "Error: PROFILE is required"
@@ -35,17 +81,105 @@ ifndef PROFILE
 endif
 	./build.sh --profile $(PROFILE)
 
-# Specific profile targets
-rpi-generic:
-	./build.sh --profile rpi-generic
+rpi:
+	./build.sh --profile rpi
 
-generic-arm64:
-	./build.sh --profile generic-arm64
+arm64:
+	./build.sh --profile arm64
 
-generic-amd64:
-	./build.sh --profile generic-amd64
+amd64:
+	./build.sh --profile amd64
 
-# Clean build artifacts
-clean:
+#
+# Checkouts
+#
+vendor:
+	@mkdir -p "$(VENDOR_DIRECTORY)"
+
+"$(VENDOR_DIRECTORY)/pkgs":
+	git clone -c advice.detachedHead=false --branch "$(PKG_VERSION)" "$(PKG_REPOSITORY)" "$(VENDOR_DIRECTORY)/pkgs"
+
+"$(VENDOR_DIRECTORY)/talos":
+	git clone -c advice.detachedHead=false --branch "$(TALOS_VERSION)" "$(TALOS_REPOSITORY)" "$(VENDOR_DIRECTORY)/talos"
+
+"$(VENDOR_DIRECTORY)/sbc-raspberrypi":
+	git clone -c advice.detachedHead=false --branch "$(SBCOVERLAY_VERSION)" "$(SBCOVERLAY_REPOSITORY)" "$(VENDOR_DIRECTORY)/sbc-raspberrypi"
+
+vendor-clean:
+	rm -rf "$(VENDOR_DIRECTORY)/pkgs"
+	rm -rf "$(VENDOR_DIRECTORY)/talos"
+	rm -rf "$(VENDOR_DIRECTORY)/sbc-raspberrypi"
+
+.PHONY: vendor-all
+vendor-all: vendor "$(VENDOR_DIRECTORY)/pkgs" "$(VENDOR_DIRECTORY)/talos" "$(VENDOR_DIRECTORY)/sbc-raspberrypi"
+
+#
+# Patches
+#
+patches-pkgs: "$(VENDOR_DIRECTORY)/pkgs"
+	@echo "Applying kernel config changes for Raspberry Pi 5..."
+	./scripts/apply-config-changes.sh "$(VENDOR_DIRECTORY)/pkgs/kernel/build/config-arm64"
+	@echo "Updating Raspberry Pi kernel configuration..."
+	./scripts/update-rpi-kernel.sh $(RPI_KERNEL_REF)
+
+patches-talos: "$(VENDOR_DIRECTORY)/talos"
+	@echo "Applying module changes for Raspberry Pi 5..."
+	./scripts/apply-module-changes.sh
+
+patches: patches-pkgs patches-talos
+
+#
+# Kernel
+#
+kernel: patches-pkgs
+	cd "$(VENDOR_DIRECTORY)/pkgs" && \
+		$(MAKE) \
+			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) PUSH=true \
+			PLATFORM=linux/arm64 \
+			kernel
+
+#
+# Overlay
+#
+overlay: "$(VENDOR_DIRECTORY)/sbc-raspberrypi"
+	@echo SBCOVERLAY_TAG = $(SBCOVERLAY_TAG)
+	cd "$(VENDOR_DIRECTORY)/sbc-raspberrypi" && \
+		$(MAKE) \
+			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) IMAGE_TAG=$(SBCOVERLAY_TAG) PUSH=true \
+			PKGS_PREFIX=$(REGISTRY)/$(REGISTRY_USERNAME) PKGS=$(PKGS_TAG) \
+			INSTALLER_ARCH=arm64 PLATFORM=linux/arm64 \
+			sbc-raspberrypi
+
+#
+# Installer/Image
+#
+installer: patches-talos kernel overlay
+	cd "$(VENDOR_DIRECTORY)/talos" && \
+		$(MAKE) \
+			REGISTRY=$(REGISTRY) USERNAME=$(REGISTRY_USERNAME) PUSH=true \
+			PKG_KERNEL=$(REGISTRY)/$(REGISTRY_USERNAME)/kernel:$(PKGS_TAG) \
+			INSTALLER_ARCH=arm64 PLATFORM=linux/arm64 \
+			IMAGER_ARGS="--overlay-name=rpi_generic --overlay-image=$(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_TAG) --system-extension-image=$(EXTENSIONS)" \
+			kernel initramfs imager installer-base installer && \
+		docker \
+			run --rm -t -v ./_out:/out -v /dev:/dev --privileged $(REGISTRY)/$(REGISTRY_USERNAME)/imager:$(TALOS_TAG) \
+			metal --arch arm64 \
+			--base-installer-image="$(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG)" \
+			--overlay-name="rpi_generic" \
+			--overlay-image="$(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_TAG)" \
+			--system-extension-image="$(EXTENSIONS)"
+
+#
+# Release
+#
+release:
+	docker pull $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG) && \
+		docker tag $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_TAG) $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TAG) && \
+		docker push $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TAG)
+
+#
+# Clean
+#
+clean: vendor-clean
 	rm -rf _out/
 	@echo "Build artifacts removed"

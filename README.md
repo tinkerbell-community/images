@@ -4,6 +4,22 @@ Raw Talos Images in OCI format, published to GitHub Container Registry.
 
 An extensible build framework for creating Talos Linux raw images with custom configurations, overlays, and system extensions.
 
+## Configuration
+
+The project uses a centralized [config.yaml](config.yaml) file to define:
+- **Talos version**: The current Talos Linux version being built
+- **Kernel modules**: Modules to add or remove for specific hardware (e.g., Raspberry Pi 5)
+- **Kernel configs**: Configuration options to enable, disable, or modify
+
+### Scripts
+
+Two scripts apply configuration changes from `config.yaml`:
+
+- **[scripts/apply-module-changes.sh](scripts/apply-module-changes.sh)**: Updates the kernel modules list
+- **[scripts/apply-config-changes.sh](scripts/apply-config-changes.sh)**: Updates kernel configuration options
+
+Both scripts use `yq` to parse the YAML configuration. Install with: `brew install yq`
+
 ## Published OCI Images
 
 Pre-built custom Talos images are automatically published to `ghcr.io` following this naming pattern:
