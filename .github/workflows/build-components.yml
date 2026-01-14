@@ -379,6 +379,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install crane
+        uses: iarekylew00t/crane-installer@v4
+
       - name: Get configuration
         id: config
         run: |
