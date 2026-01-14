@@ -466,7 +466,7 @@ jobs:
       - name: Set up ORAS
         uses: oras-project/setup-oras@v1
         with:
-          version: 1.1.0
+          version: 1.3.0
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -570,7 +570,7 @@ jobs:
       - name: Set up ORAS
         uses: oras-project/setup-oras@v1
         with:
-          version: 1.1.0
+          version: 1.3.0
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -670,7 +670,7 @@ jobs:
       - name: Set up ORAS
         uses: oras-project/setup-oras@v1
         with:
-          version: 1.1.0
+          version: 1.3.0
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
