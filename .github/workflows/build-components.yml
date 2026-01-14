@@ -11,8 +11,6 @@ on:
           - kernel
           - overlay
           - installer
-          - arm64
-          - amd64
           - images
           - all
   push:
@@ -45,8 +43,7 @@ jobs:
       build-kernel: ${{ steps.decide.outputs.build-kernel }}
       build-overlay: ${{ steps.decide.outputs.build-overlay }}
       build-installer: ${{ steps.decide.outputs.build-installer }}
-      build-arm64: ${{ steps.decide.outputs.build-arm64 }}
-      build-amd64: ${{ steps.decide.outputs.build-amd64 }}
+      build-images: ${{ steps.decide.outputs.build-images }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -91,24 +88,18 @@ jobs:
               echo "build-installer=false" >> $GITHUB_OUTPUT
             fi
             
-            if [ "$target" == "all" ] || [ "$target" == "arm64" ] || [ "$target" == "images" ]; then
-              echo "build-arm64=true" >> $GITHUB_OUTPUT
+            # Machine image builds
+            if [ "$target" == "all" ] || [ "$target" == "images" ]; then
+              echo "build-images=true" >> $GITHUB_OUTPUT
             else
-              echo "build-arm64=false" >> $GITHUB_OUTPUT
-            fi
-            
-            if [ "$target" == "all" ] || [ "$target" == "amd64" ] || [ "$target" == "images" ]; then
-              echo "build-amd64=true" >> $GITHUB_OUTPUT
-            else
-              echo "build-amd64=false" >> $GITHUB_OUTPUT
+              echo "build-images=false" >> $GITHUB_OUTPUT
             fi
           elif [ "${{ github.event_name }}" == "schedule" ]; then
             # Scheduled builds - build everything
             echo "build-kernel=true" >> $GITHUB_OUTPUT
             echo "build-overlay=true" >> $GITHUB_OUTPUT
             echo "build-installer=true" >> $GITHUB_OUTPUT
-            echo "build-arm64=true" >> $GITHUB_OUTPUT
-            echo "build-amd64=true" >> $GITHUB_OUTPUT
+            echo "build-images=true" >> $GITHUB_OUTPUT
           else
             # Push event - build based on dependency chain
             pkgfile="${{ steps.filter.outputs.pkgfile }}"
@@ -117,39 +108,34 @@ jobs:
             installer="${{ steps.filter.outputs.installer }}"
             
             # Dependency chain: 
-            # RPi-specific: kernel -> overlay -> installer -> arm64 image
-            # Generic: installer -> arm64/amd64 images
+            # kernel -> overlay -> installer -> images
             # 
             # If Pkgfile changes, rebuild everything (version change)
-            # If kernel changes, rebuild kernel, overlay, installer, arm64 image only
-            # If overlay changes, rebuild overlay, installer, arm64 image only
-            # If installer changes, rebuild installer and all images
+            # If kernel changes, rebuild kernel, overlay, installer, images
+            # If overlay changes, rebuild overlay, installer, images (RPi-specific)
+            # If installer changes, rebuild installer and images
             
             if [ "$pkgfile" == "true" ] || [ "$kernel" == "true" ]; then
               echo "build-kernel=true" >> $GITHUB_OUTPUT
               echo "build-overlay=true" >> $GITHUB_OUTPUT
               echo "build-installer=true" >> $GITHUB_OUTPUT
-              echo "build-arm64=true" >> $GITHUB_OUTPUT
-              echo "build-amd64=true" >> $GITHUB_OUTPUT
+              echo "build-images=true" >> $GITHUB_OUTPUT
             elif [ "$overlay" == "true" ]; then
               echo "build-kernel=false" >> $GITHUB_OUTPUT
               echo "build-overlay=true" >> $GITHUB_OUTPUT
               echo "build-installer=true" >> $GITHUB_OUTPUT
-              echo "build-arm64=true" >> $GITHUB_OUTPUT
-              echo "build-amd64=false" >> $GITHUB_OUTPUT
+              echo "build-images=true" >> $GITHUB_OUTPUT
             elif [ "$installer" == "true" ]; then
               echo "build-kernel=false" >> $GITHUB_OUTPUT
               echo "build-overlay=false" >> $GITHUB_OUTPUT
               echo "build-installer=true" >> $GITHUB_OUTPUT
-              echo "build-arm64=true" >> $GITHUB_OUTPUT
-              echo "build-amd64=true" >> $GITHUB_OUTPUT
+              echo "build-images=true" >> $GITHUB_OUTPUT
             else
               # No relevant changes
               echo "build-kernel=false" >> $GITHUB_OUTPUT
               echo "build-overlay=false" >> $GITHUB_OUTPUT
               echo "build-installer=false" >> $GITHUB_OUTPUT
-              echo "build-arm64=false" >> $GITHUB_OUTPUT
-              echo "build-amd64=false" >> $GITHUB_OUTPUT
+              echo "build-images=false" >> $GITHUB_OUTPUT
             fi
           fi
 
@@ -427,14 +413,19 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "${{ env.REGISTRY }}/tinkerbell-community/installer:latest" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-  # Build generic ARM64 image
-  build-image-arm64:
-    runs-on: ubuntu-24.04-arm
+  # Build machine images (matrix)
+  build-images:
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     needs: [detect-changes, build-installer]
     if: |
       always() &&
-      needs.detect-changes.outputs.build-arm64 == 'true' &&
+      needs.detect-changes.outputs.build-images == 'true' &&
       (needs.build-installer.result == 'success' || needs.build-installer.result == 'skipped')
+    strategy:
+      matrix:
+        arch:
+          - arm64
+          - amd64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -467,14 +458,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up vendor repositories
-        run: make vendor-all
-
-      - name: Build ARM64 image
+      - name: Build image
         env:
           REGISTRY: ${{ env.REGISTRY }}
           REGISTRY_USERNAME: tinkerbell-community
-        run: make arm64
+        run: make ${{ matrix.arch }}
 
       - name: Verify built image
         run: |
@@ -495,68 +483,45 @@ jobs:
           image_basename=$(basename "$image_file")
           echo "IMAGE_FILE=$image_basename" >> $GITHUB_ENV
 
-      - name: Push to OCI Registry
+      - name: Push to OCI Registry with arch suffix
         env:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
+          ARCH: ${{ matrix.arch }}
         run: |
-          # Construct the OCI image tag following the pattern:
-          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}"
+          # Construct the OCI image tag with arch suffix
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}-${{ matrix.arch }}"
 
           echo "Pushing to: $image_tag"
 
           # Push using ORAS with the specified artifact type
           oras push "$image_tag" \
             --artifact-type application/vnd.acme.rocket.config \
-            --artifact-platform linux/arm64 \
+            --artifact-platform linux/${{ matrix.arch }} \
             "$IMAGE_FILE"
 
           echo "Successfully pushed $image_tag"
 
-          # Also tag as latest for the platform
-          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:latest"
-          echo "Tagging as latest: $latest_tag"
-
-          oras push "$latest_tag" \
-            --artifact-type application/vnd.acme.rocket.config \
-            --artifact-platform linux/arm64 \
-            "$IMAGE_FILE"
-
-          echo "Successfully pushed $latest_tag"
-
-      - name: Upload ARM64 image
+      - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: talos-arm64-${{ steps.config.outputs.talos_version }}
+          name: talos-${{ matrix.arch }}-${{ steps.config.outputs.talos_version }}
           path: "*.raw.xz"
           if-no-files-found: error
 
-  # Build AMD64 image
-  build-image-amd64:
-    runs-on: ubuntu-24.04
-    needs: [detect-changes, build-installer]
-    if: |
-      always() &&
-      needs.detect-changes.outputs.build-amd64 == 'true' &&
-      (needs.build-installer.result == 'success' || needs.build-installer.result == 'skipped')
+  # Create multi-arch index
+  create-multiarch-index:
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: success()
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Configure git
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
 
       - name: Get configuration
         id: config
         run: |
           talos_version=$(yq '.talos_version' Pkgfile)
           echo "talos_version=$talos_version" >> $GITHUB_OUTPUT
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
       - name: Set up ORAS
         uses: oras-project/setup-oras@v1
@@ -570,65 +535,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up vendor repositories
-        run: make vendor-all
-
-      - name: Build AMD64 image
-        env:
-          REGISTRY: ${{ env.REGISTRY }}
-          REGISTRY_USERNAME: tinkerbell-community
-        run: make amd64
-
-      - name: Verify built image
-        run: |
-          ls -lh _out/
-
-          # Find the built image file
-          image_file=$(find _out/ -name "*.raw.xz" | head -1)
-
-          if [ -z "$image_file" ]; then
-            echo "Error: No image file found in _out/"
-            exit 1
-          fi
-
-          echo "Found image: $image_file"
-
-          # Move file to current directory to avoid nested structure in OCI
-          mv "$image_file" ./
-          image_basename=$(basename "$image_file")
-          echo "IMAGE_FILE=$image_basename" >> $GITHUB_ENV
-
-      - name: Push to OCI Registry
+      - name: Create multi-arch index for version tag
         env:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
         run: |
-          # Construct the OCI image tag following the pattern:
-          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}"
+          # Create index with version tag pointing to arch-specific images
+          oras index push "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}" \
+            "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}-amd64" \
+            "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}-arm64"
 
-          echo "Pushing to: $image_tag"
+          echo "Successfully created multi-arch index: ${TALOS_VERSION}"
 
-          # Push using ORAS with the specified artifact type
-          oras push "$image_tag" \
-            --artifact-type application/vnd.acme.rocket.config \
-            --artifact-platform linux/amd64 \
-            "$IMAGE_FILE"
+      - name: Create multi-arch index for latest tag
+        env:
+          TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
+        run: |
+          # Create index with latest tag pointing to arch-specific images
+          oras index push "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:latest" \
+            "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}-amd64" \
+            "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}-arm64"
 
-          echo "Successfully pushed $image_tag"
-
-          # Also tag as latest for the platform
-          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:latest"
-          echo "Tagging as latest: $latest_tag"
-
-          oras push "$latest_tag" \
-            --artifact-type application/vnd.acme.rocket.config \
-            --artifact-platform linux/amd64 \
-            "$IMAGE_FILE"
-
-          echo "Successfully pushed $latest_tag"
-
-      - name: Upload AMD64 image
-        uses: actions/upload-artifact@v4
-        with:
-          name: talos-amd64-${{ steps.config.outputs.talos_version }}
-          path: "*.raw.xz"
-          if-no-files-found: error
+          echo "Successfully created multi-arch index: latest"
