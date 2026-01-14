@@ -13,7 +13,6 @@ on:
           - installer
           - arm64
           - amd64
-          - rpi
           - images
           - all
   push:
@@ -46,7 +45,6 @@ jobs:
       build-kernel: ${{ steps.decide.outputs.build-kernel }}
       build-overlay: ${{ steps.decide.outputs.build-overlay }}
       build-installer: ${{ steps.decide.outputs.build-installer }}
-      build-rpi: ${{ steps.decide.outputs.build-rpi }}
       build-arm64: ${{ steps.decide.outputs.build-arm64 }}
       build-amd64: ${{ steps.decide.outputs.build-amd64 }}
     steps:
@@ -87,17 +85,10 @@ jobs:
               echo "build-overlay=false" >> $GITHUB_OUTPUT
             fi
             
-            if [ "$target" == "all" ] || [ "$target" == "installer" ] || [ "$target" == "rpi" ] || [ "$target" == "images" ]; then
+            if [ "$target" == "all" ] || [ "$target" == "installer" ] || [ "$target" == "arm64" ] || [ "$target" == "images" ]; then
               echo "build-installer=true" >> $GITHUB_OUTPUT
             else
               echo "build-installer=false" >> $GITHUB_OUTPUT
-            fi
-            
-            # Machine image builds
-            if [ "$target" == "all" ] || [ "$target" == "rpi" ] || [ "$target" == "images" ]; then
-              echo "build-rpi=true" >> $GITHUB_OUTPUT
-            else
-              echo "build-rpi=false" >> $GITHUB_OUTPUT
             fi
             
             if [ "$target" == "all" ] || [ "$target" == "arm64" ] || [ "$target" == "images" ]; then
@@ -116,7 +107,6 @@ jobs:
             echo "build-kernel=true" >> $GITHUB_OUTPUT
             echo "build-overlay=true" >> $GITHUB_OUTPUT
             echo "build-installer=true" >> $GITHUB_OUTPUT
-            echo "build-rpi=true" >> $GITHUB_OUTPUT
             echo "build-arm64=true" >> $GITHUB_OUTPUT
             echo "build-amd64=true" >> $GITHUB_OUTPUT
           else
@@ -127,33 +117,30 @@ jobs:
             installer="${{ steps.filter.outputs.installer }}"
             
             # Dependency chain: 
-            # RPi-specific: kernel -> overlay -> installer -> rpi image
+            # RPi-specific: kernel -> overlay -> installer -> arm64 image
             # Generic: installer -> arm64/amd64 images
             # 
             # If Pkgfile changes, rebuild everything (version change)
-            # If kernel changes, rebuild kernel, overlay, installer, rpi image only
-            # If overlay changes, rebuild overlay, installer, rpi image only
+            # If kernel changes, rebuild kernel, overlay, installer, arm64 image only
+            # If overlay changes, rebuild overlay, installer, arm64 image only
             # If installer changes, rebuild installer and all images
             
             if [ "$pkgfile" == "true" ] || [ "$kernel" == "true" ]; then
               echo "build-kernel=true" >> $GITHUB_OUTPUT
               echo "build-overlay=true" >> $GITHUB_OUTPUT
               echo "build-installer=true" >> $GITHUB_OUTPUT
-              echo "build-rpi=true" >> $GITHUB_OUTPUT
               echo "build-arm64=true" >> $GITHUB_OUTPUT
               echo "build-amd64=true" >> $GITHUB_OUTPUT
             elif [ "$overlay" == "true" ]; then
               echo "build-kernel=false" >> $GITHUB_OUTPUT
               echo "build-overlay=true" >> $GITHUB_OUTPUT
               echo "build-installer=true" >> $GITHUB_OUTPUT
-              echo "build-rpi=true" >> $GITHUB_OUTPUT
-              echo "build-arm64=false" >> $GITHUB_OUTPUT
+              echo "build-arm64=true" >> $GITHUB_OUTPUT
               echo "build-amd64=false" >> $GITHUB_OUTPUT
             elif [ "$installer" == "true" ]; then
               echo "build-kernel=false" >> $GITHUB_OUTPUT
               echo "build-overlay=false" >> $GITHUB_OUTPUT
               echo "build-installer=true" >> $GITHUB_OUTPUT
-              echo "build-rpi=true" >> $GITHUB_OUTPUT
               echo "build-arm64=true" >> $GITHUB_OUTPUT
               echo "build-amd64=true" >> $GITHUB_OUTPUT
             else
@@ -161,7 +148,6 @@ jobs:
               echo "build-kernel=false" >> $GITHUB_OUTPUT
               echo "build-overlay=false" >> $GITHUB_OUTPUT
               echo "build-installer=false" >> $GITHUB_OUTPUT
-              echo "build-rpi=false" >> $GITHUB_OUTPUT
               echo "build-arm64=false" >> $GITHUB_OUTPUT
               echo "build-amd64=false" >> $GITHUB_OUTPUT
             fi
@@ -441,104 +427,6 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "${{ env.REGISTRY }}/tinkerbell-community/installer:latest" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-  # Build Raspberry Pi image
-  build-image-rpi:
-    runs-on: ubuntu-24.04-arm
-    needs: [detect-changes, build-installer]
-    if: |
-      always() &&
-      needs.detect-changes.outputs.build-rpi == 'true' &&
-      (needs.build-installer.result == 'success' || needs.build-installer.result == 'skipped')
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Configure git
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set up ORAS
-        uses: oras-project/setup-oras@v1
-        with:
-          version: 1.3.0
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get configuration
-        id: config
-        run: |
-          talos_version=$(yq '.talos_version' Pkgfile)
-          echo "talos_version=$talos_version" >> $GITHUB_OUTPUT
-
-      - name: Set up vendor repositories
-        run: make vendor-all
-
-      - name: Build Raspberry Pi image
-        env:
-          REGISTRY: ${{ env.REGISTRY }}
-          REGISTRY_USERNAME: tinkerbell-community
-        run: make rpi
-
-      - name: Verify built image
-        run: |
-          ls -lh _out/
-
-          # Find the built image file
-          image_file=$(find _out/ -name "*.raw.xz" | head -1)
-
-          if [ -z "$image_file" ]; then
-            echo "Error: No image file found in _out/"
-            exit 1
-          fi
-
-          echo "Found image: $image_file"
-          echo "IMAGE_FILE=$image_file" >> $GITHUB_ENV
-
-      - name: Push to OCI Registry
-        env:
-          TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
-        run: |
-          # Construct the OCI image tag following the pattern:
-          # ghcr.io/tinkerbell-community/talos/arm64/nocloud:${VERSION}.xz
-          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:${TALOS_VERSION}.xz"
-
-          echo "Pushing to: $image_tag"
-
-          # Push using ORAS with the specified artifact type
-          oras push "$image_tag" \
-            --artifact-type application/vnd.acme.rocket.config \
-            "$IMAGE_FILE"
-
-          echo "Successfully pushed $image_tag"
-
-          # Also tag as latest for the platform
-          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:latest"
-          echo "Tagging as latest: $latest_tag"
-
-          oras push "$latest_tag" \
-            --artifact-type application/vnd.acme.rocket.config \
-            "$IMAGE_FILE"
-
-          echo "Successfully pushed $latest_tag"
-
-      - name: Upload Raspberry Pi image
-        uses: actions/upload-artifact@v4
-        with:
-          name: talos-rpi-${{ steps.config.outputs.talos_version }}
-          path: _out/*.raw.xz
-          if-no-files-found: error
-
   # Build generic ARM64 image
   build-image-arm64:
     runs-on: ubuntu-24.04-arm
@@ -608,8 +496,7 @@ jobs:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
         run: |
           # Construct the OCI image tag following the pattern:
-          # ghcr.io/tinkerbell-community/talos/nocloud:${VERSION}.xz
-          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}.xz"
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}"
 
           echo "Pushing to: $image_tag"
 
@@ -708,8 +595,7 @@ jobs:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
         run: |
           # Construct the OCI image tag following the pattern:
-          # ghcr.io/tinkerbell-community/talos/nocloud:${VERSION}.xz
-          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}.xz"
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}"
 
           echo "Pushing to: $image_tag"
 

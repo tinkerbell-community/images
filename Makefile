@@ -27,7 +27,7 @@ SBCOVERLAY_REPOSITORY = https://github.com/$(REGISTRY_USERNAME)/sbc-raspberrypi.
 VENDOR_DIRECTORY := $(PWD)/vendor
 PATCHES_DIRECTORY := $(PWD)/patches
 
-.PHONY: help clean list-profiles build rpi arm64 amd64
+.PHONY: help clean list-profiles build arm64 amd64
 .PHONY: vendor vendor-clean patches-pkgs patches-talos patches
 .PHONY: kernel overlay installer
 .PHONY: release release-kernel release-overlay release-installer
@@ -40,7 +40,6 @@ help:
 	@echo "Talos Images Build Framework"
 	@echo ""
 	@echo "=== Machine-image Builds ==="
-	@echo "  rpi            - Build Raspberry Pi image"
 	@echo "  arm64          - Build generic ARM64 image"
 	@echo "  amd64          - Build generic AMD64 image"
 	@echo ""
@@ -59,8 +58,7 @@ help:
 	@echo "  clean          - Remove build artifacts and vendor"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make rpi"
-	@echo "  make build PROFILE=rpi-generic"
+	@echo "  make arm64"
 	@echo "  make vendor patches kernel overlay installer"
 
 #
@@ -182,7 +180,8 @@ release: release-kernel release-overlay release-installer
 #
 # Machine Images
 #
-rpi:
+
+arm64:
 	./scripts/build.sh \
 		--arch arm64 \
 		--platform nocloud \
@@ -195,24 +194,20 @@ rpi:
 		--extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
 		--disk-size 1306902528
 
-arm64:
-	./scripts/build.sh \
-		--arch arm64 \
-		--platform nocloud \
-		--version $(TALOS_VERSION) \
-		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) \
-		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager
-
 amd64:
 	./scripts/build.sh \
 		--arch amd64 \
 		--platform nocloud \
 		--version $(TALOS_VERSION) \
-		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
-		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) \
+		--imager ghcr.io/siderolabs/imager \
+		--base-installer ghcr.io/siderolabs/installer-base:$(TALOS_VERSION) \
 		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
 		--extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
-		--extension ghcr.io/siderolabs/intel-ucode:20231114
+		--extension ghcr.io/siderolabs/intel-ucode:20251111 \
+		--extension ghcr.io/siderolabs/nvme-cli:v2.14 \
+		--extension ghcr.io/siderolabs/amd-ucode:20260110 \
+		--extension ghcr.io/siderolabs/nvidia-open-gpu-kernel-modules-production:570.195.03-$(TALOS_VERSION) \
+		--extension ghcr.io/siderolabs/nvidia-container-toolkit-production:570.195.03-v1.18.1
 
 #
 # Clean
