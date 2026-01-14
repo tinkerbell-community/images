@@ -489,7 +489,11 @@ jobs:
           fi
 
           echo "Found image: $image_file"
-          echo "IMAGE_FILE=$image_file" >> $GITHUB_ENV
+
+          # Move file to current directory to avoid nested structure in OCI
+          mv "$image_file" ./
+          image_basename=$(basename "$image_file")
+          echo "IMAGE_FILE=$image_basename" >> $GITHUB_ENV
 
       - name: Push to OCI Registry
         env:
@@ -523,7 +527,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: talos-arm64-${{ steps.config.outputs.talos_version }}
-          path: _out/*.raw.xz
+          path: "*.raw.xz"
           if-no-files-found: error
 
   # Build AMD64 image
@@ -588,7 +592,11 @@ jobs:
           fi
 
           echo "Found image: $image_file"
-          echo "IMAGE_FILE=$image_file" >> $GITHUB_ENV
+
+          # Move file to current directory to avoid nested structure in OCI
+          mv "$image_file" ./
+          image_basename=$(basename "$image_file")
+          echo "IMAGE_FILE=$image_basename" >> $GITHUB_ENV
 
       - name: Push to OCI Registry
         env:
@@ -622,5 +630,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: talos-amd64-${{ steps.config.outputs.talos_version }}
-          path: _out/*.raw.xz
+          path: "*.raw.xz"
           if-no-files-found: error
