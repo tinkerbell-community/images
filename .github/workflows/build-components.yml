@@ -87,7 +87,7 @@ jobs:
               echo "build-overlay=false" >> $GITHUB_OUTPUT
             fi
             
-            if [ "$target" == "all" ] || [ "$target" == "installer" ] || [ "$target" == "rpi" ] || [ "$target" == "arm64" ] || [ "$target" == "amd64" ] || [ "$target" == "images" ]; then
+            if [ "$target" == "all" ] || [ "$target" == "installer" ] || [ "$target" == "rpi" ] || [ "$target" == "images" ]; then
               echo "build-installer=true" >> $GITHUB_OUTPUT
             else
               echo "build-installer=false" >> $GITHUB_OUTPUT
