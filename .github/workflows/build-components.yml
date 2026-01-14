@@ -511,8 +511,11 @@ jobs:
   # Create multi-arch index
   create-multiarch-index:
     runs-on: ubuntu-latest
-    needs: build-images
-    if: success()
+    needs: [detect-changes, build-installer, build-images]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.build-images == 'true' &&
+      (needs.build-installer.result == 'success' || needs.build-installer.result == 'skipped')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
