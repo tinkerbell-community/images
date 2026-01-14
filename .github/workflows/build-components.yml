@@ -608,24 +608,26 @@ jobs:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
         run: |
           # Construct the OCI image tag following the pattern:
-          # ghcr.io/tinkerbell-community/talos/arm64/nocloud:${VERSION}.xz
-          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:${TALOS_VERSION}.xz"
+          # ghcr.io/tinkerbell-community/talos/nocloud:${VERSION}.xz
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}.xz"
 
           echo "Pushing to: $image_tag"
 
           # Push using ORAS with the specified artifact type
           oras push "$image_tag" \
             --artifact-type application/vnd.acme.rocket.config \
+            --artifact-platform linux/arm64 \
             "$IMAGE_FILE"
 
           echo "Successfully pushed $image_tag"
 
           # Also tag as latest for the platform
-          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/arm64/nocloud:latest"
+          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:latest"
           echo "Tagging as latest: $latest_tag"
 
           oras push "$latest_tag" \
             --artifact-type application/vnd.acme.rocket.config \
+            --artifact-platform linux/arm64 \
             "$IMAGE_FILE"
 
           echo "Successfully pushed $latest_tag"
@@ -706,24 +708,26 @@ jobs:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
         run: |
           # Construct the OCI image tag following the pattern:
-          # ghcr.io/tinkerbell-community/talos/amd64/nocloud:${VERSION}.xz
-          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/amd64/nocloud:${TALOS_VERSION}.xz"
+          # ghcr.io/tinkerbell-community/talos/nocloud:${VERSION}.xz
+          image_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}.xz"
 
           echo "Pushing to: $image_tag"
 
           # Push using ORAS with the specified artifact type
           oras push "$image_tag" \
             --artifact-type application/vnd.acme.rocket.config \
+            --artifact-platform linux/amd64 \
             "$IMAGE_FILE"
 
           echo "Successfully pushed $image_tag"
 
           # Also tag as latest for the platform
-          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/amd64/nocloud:latest"
+          latest_tag="${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:latest"
           echo "Tagging as latest: $latest_tag"
 
           oras push "$latest_tag" \
             --artifact-type application/vnd.acme.rocket.config \
+            --artifact-platform linux/amd64 \
             "$IMAGE_FILE"
 
           echo "Successfully pushed $latest_tag"
