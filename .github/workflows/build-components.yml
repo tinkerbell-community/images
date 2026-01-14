@@ -515,7 +515,8 @@ jobs:
     if: |
       always() &&
       needs.detect-changes.outputs.build-images == 'true' &&
-      (needs.build-installer.result == 'success' || needs.build-installer.result == 'skipped')
+      (needs.build-installer.result == 'success' || needs.build-installer.result == 'skipped') &&
+      needs.build-images.result == 'success'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
