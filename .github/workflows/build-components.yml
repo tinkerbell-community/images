@@ -530,7 +530,7 @@ jobs:
       - name: Set up ORAS
         uses: oras-project/setup-oras@v1
         with:
-          version: 1.2.0
+          version: 1.3.0
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -544,7 +544,7 @@ jobs:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
         run: |
           # Create index with version tag pointing to arch-specific images
-          oras index push "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}" \
+          oras manifest create "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}" \
             "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}-amd64" \
             "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}-arm64"
 
@@ -555,7 +555,7 @@ jobs:
           TALOS_VERSION: ${{ steps.config.outputs.talos_version }}
         run: |
           # Create index with latest tag pointing to arch-specific images
-          oras index push "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:latest" \
+          oras manifest create "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:latest" \
             "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}-amd64" \
             "${{ env.REGISTRY }}/${{ github.repository }}/talos/nocloud:${TALOS_VERSION}-arm64"
 
