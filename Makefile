@@ -189,7 +189,7 @@ arm64:
 		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
 		--overlay-name rpi_generic \
 		--overlay-image $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) \
-		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_VERSION) \
+		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) \
 		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
 		--extension ghcr.io/siderolabs/util-linux-tools:2.41.2 \
 		--disk-size 1306902528
