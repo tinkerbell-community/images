@@ -20,6 +20,7 @@ OVERLAY_IMAGE=""
 KERNEL_PATH=""
 INITRAMFS_PATH=""
 BASE_INSTALLER=""
+BOOT_LOADER=""
 declare -a SYSTEM_EXTENSIONS=()
 
 usage() {
@@ -46,6 +47,7 @@ OPTIONS:
   --kernel PATH                Kernel file path
   --initramfs PATH             Initramfs file path
   --base-installer REF         Base installer image/tarball (default: auto)
+  --boot-loader NAME           Boot loader name (grub|none|sd-boot|dual-boot)
   
   -e, --extension REF          System extension (image ref or tarball)
                                Can be specified multiple times
@@ -89,6 +91,7 @@ while [[ $# -gt 0 ]]; do
     --kernel) KERNEL_PATH="$2"; shift 2 ;;
     --initramfs) INITRAMFS_PATH="$2"; shift 2 ;;
     --base-installer) BASE_INSTALLER="$2"; shift 2 ;;
+    --boot-loader) BOOT_LOADER="$2"; shift 2 ;;
     -e|--extension) SYSTEM_EXTENSIONS+=("$2"); shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Error: Unknown option: $1" >&2; usage; exit 1 ;;
@@ -184,6 +187,7 @@ output:
   imageOptions:
     diskFormat: ${DISK_FORMAT}
     diskSize: ${DISK_SIZE}
+    bootloader: ${BOOT_LOADER}
   outFormat: .${COMPRESSION}
 "
 
