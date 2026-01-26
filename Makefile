@@ -205,8 +205,8 @@ amd64:
 		--extension ghcr.io/siderolabs/intel-ucode:20251111 \
 		--extension ghcr.io/siderolabs/nvme-cli:v2.14 \
 		--extension ghcr.io/siderolabs/amd-ucode:20260110 \
-		--extension ghcr.io/siderolabs/nvidia-open-gpu-kernel-modules-production:570.195.03-$(TALOS_VERSION) \
-		--extension ghcr.io/siderolabs/nvidia-container-toolkit-production:570.195.03-v1.18.1
+		--extension ghcr.io/siderolabs/nvidia-open-gpu-kernel-modules-production:570.211.01-$(TALOS_VERSION) \
+		--extension ghcr.io/siderolabs/nvidia-container-toolkit-production:570.211.01-v1.18.1
 
 #
 # Clean
