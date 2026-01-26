@@ -140,7 +140,7 @@ installer: patches-talos
 			INSTALLER_ARCH=arm64 PLATFORM=$(PLATFORM) \
 			PROGRESS=$(PROGRESS) \
 			CI_ARGS="$(CI_ARGS)" \
-			IMAGER_ARGS="--overlay-name=rpi_generic --base-installer-image=$(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_TAG) --overlay-image=$(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) --system-extension-image=$(EXTENSIONS)" \
+			IMAGER_ARGS="--base-installer-image=$(REGISTRY)/$(REGISTRY_USERNAME)/installer-base:$(TALOS_TAG) --system-extension-image=$(EXTENSIONS)" \
 			kernel initramfs imager installer-base installer
 
 #
@@ -187,8 +187,6 @@ arm64:
 		--platform nocloud \
 		--version $(TALOS_VERSION) \
 		--imager $(REGISTRY)/$(REGISTRY_USERNAME)/imager \
-		--overlay-name rpi_generic \
-		--overlay-image $(REGISTRY)/$(REGISTRY_USERNAME)/sbc-raspberrypi:$(SBCOVERLAY_VERSION) \
 		--base-installer $(REGISTRY)/$(REGISTRY_USERNAME)/installer:$(TALOS_VERSION) \
 		--boot-loader grub \
 		--extension ghcr.io/siderolabs/iscsi-tools:v0.2.0 \
